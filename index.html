@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grey Wolf Patrol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: control room. Chart table / periscope on the left, instrument rack on the right; stacks on phones.
+   Single deliberate dark look: red-lit night control room, brass fittings, chart-table teal. */
+:root{
+  --hull:#0b1213; --panel:#121c1d; --panel-hi:#1a2828; --rule:#2a3b3a;
+  --ink:#dfe6dc; --dim:#8fa29c; --brass:#c8a35a; --brass-ink:#1b150a; --amber:#f0b44c;
+  --alarm:#e0533f; --ok:#79c08f; --water:#0e2329;
+  --f-display:'Saira Stencil One', Impact, 'Arial Black', sans-serif;
+  --f-ui:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--hull);color:var(--ink);font:500 15px/1.35 var(--f-ui);overflow:hidden}
+#app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 384px;grid-template-rows:auto minmax(0,1fr);gap:10px;padding:10px 16px;box-sizing:border-box}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px}
+.brand{font-family:var(--f-display);font-size:24px;letter-spacing:.05em;color:var(--brass);line-height:1}
+.stat{font-family:var(--f-mono);font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat b{color:var(--ink);font-weight:600}
+.hgroup{display:flex;align-items:center;gap:6px}
+.spacer{flex:1}
+#viewport{position:relative;min-height:0;min-width:0;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--water)}
+#main{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.vtools{position:absolute;display:flex;gap:6px;flex-wrap:wrap}
+.vtools.tl{top:10px;left:10px}
+.vtools.tr{top:10px;right:10px}
+.vtools.br{bottom:10px;right:10px}
+#rack{min-height:0;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.panel h2{margin:0;font:700 12px/1 var(--f-ui);letter-spacing:.18em;text-transform:uppercase;color:var(--brass);display:flex;justify-content:space-between;gap:8px}
+.panel h2 small{font:500 11px/1 var(--f-mono);letter-spacing:0;color:var(--dim);text-transform:none}
+button{font:600 13.5px/1 var(--f-ui);letter-spacing:.04em;color:var(--ink);background:var(--panel-hi);border:1px solid var(--rule);border-radius:4px;padding:7px 9px;cursor:pointer;min-height:32px;touch-action:manipulation}
+button:hover{border-color:var(--brass)}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+button.on{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.vtools button{background:rgba(11,18,19,.82);backdrop-filter:blur(3px)}
+.vtools button.on{background:var(--brass)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row > .lbl{font:600 11px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);min-width:58px}
+.grow{flex:1}
+.readouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.ro{background:var(--hull);border:1px solid var(--rule);border-radius:4px;padding:6px 8px;min-width:0}
+.ro span{display:block;font:600 10.5px/1 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.ro b{display:block;font:600 20px/1.15 var(--f-mono);color:var(--amber);font-variant-numeric:tabular-nums;margin-top:3px}
+.ro i{display:block;font:400 11px/1.2 var(--f-mono);color:var(--dim);font-style:normal}
+.tele{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.tele button{padding:7px 2px;font-size:12.5px}
+.tdc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.tdc div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dotted var(--rule);padding-block:3px;min-width:0}
+.tdc div span{color:var(--dim)}
+.tdc div b{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdc .wide{grid-column:1/-1}
+.qbar{height:6px;background:var(--hull);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.qbar i{display:block;height:100%;background:var(--amber);width:0}
+.tubes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.tube{border:1px solid var(--rule);border-radius:4px;padding:5px 4px 6px;background:var(--hull);font:500 11px/1.15 var(--f-mono);text-align:center;position:relative;overflow:hidden;min-width:0}
+.tube b{display:block;font:700 13px/1 var(--f-ui);letter-spacing:.06em;color:var(--dim)}
+.tube.ready{border-color:var(--ok)} .tube.ready b{color:var(--ok)}
+.tube.jam{border-color:var(--alarm)} .tube.jam b{color:var(--alarm)}
+.tube .prog{position:absolute;left:0;bottom:0;height:3px;background:var(--brass)}
+#fire{background:var(--alarm);border-color:var(--alarm);color:#fff;font-size:17px;letter-spacing:.18em;min-height:42px;flex:1}
+#fire:disabled{background:var(--panel-hi);border-color:var(--rule);color:var(--dim)}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:72px minmax(0,1fr) 44px;gap:8px;align-items:center;font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.bar .track{height:8px;background:var(--hull);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.bar .track i{display:block;height:100%;width:50%;background:var(--ok);transition:width .3s}
+.bar em{font:600 12px/1 var(--f-mono);font-style:normal;color:var(--ink);text-align:right;letter-spacing:0;font-variant-numeric:tabular-nums}
+.sys{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:600 11px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--dim)}
+.chip.bad{border-color:var(--alarm);color:var(--alarm)}
+#log{list-style:none;margin:0;padding:0;font:400 12.5px/1.35 var(--f-mono);max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+#log li{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;color:var(--ink)}
+#log time{color:var(--dim)}
+#log li.bad span{color:var(--alarm)}
+#log li.good span{color:var(--ok)}
+#log li.radio span{color:var(--amber)}
+#overlay{position:fixed;inset:0;background:rgba(5,9,10,.78);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;overflow-y:auto}
+.card{background:var(--panel);border:1px solid var(--brass);border-radius:8px;max-width:640px;width:100%;padding:24px 26px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;max-height:100%;overflow-y:auto}
+.card .eyebrow{font:600 12px/1 var(--f-ui);letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+.card h1{font:400 44px/1 var(--f-display);color:var(--brass);margin:0;letter-spacing:.03em;text-wrap:balance}
+.card h3{font:700 13px/1 var(--f-ui);letter-spacing:.18em;text-transform:uppercase;color:var(--brass);margin:6px 0 0}
+.card p{margin:0;max-width:62ch;font-size:16px;line-height:1.45}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.choices button{text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:5px;min-height:auto}
+.choices button b{font:700 17px/1 var(--f-ui);letter-spacing:.06em;color:var(--amber)}
+.choices button span{font:500 13.5px/1.3 var(--f-ui);color:var(--dim);letter-spacing:0}
+.keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;font:400 13px/1.4 var(--f-mono)}
+.keys div{display:flex;gap:10px} .keys kbd{color:var(--amber);min-width:62px;font-family:var(--f-mono)}
+.tally{font:400 13.5px/1.5 var(--f-mono);margin:0;padding:0;list-style:none}
+.tally li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--rule);padding-block:3px}
+.big{font:600 28px/1 var(--f-mono);color:var(--amber)}
+@media (max-width:900px){
+  html,body{height:auto}
+  body{overflow:auto}
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 62vh auto;height:auto}
+  #rack{overflow:visible}
+  .brand{font-size:20px}
+}
+@media (max-width:520px){
+  .choices,.keys{grid-template-columns:minmax(0,1fr)}
+  .card h1{font-size:34px}
+  .tele button{font-size:11.5px}
+}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){ .bar .track i{transition:none} }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="brand">Grey Wolf Patrol</div>
+    <div class="stat" id="clock">D1 14:20 · Day</div>
+    <div class="stat">Sunk <b id="tons">0</b> GRT</div>
+    <div class="stat">Torpedoes <b id="torps">14</b></div>
+    <div class="spacer"></div>
+    <div class="hgroup">
+      <span class="stat">Time</span>
+      <button data-act="tc" data-v="down" aria-label="Slower time">−</button>
+      <span class="stat"><b id="tcv">1×</b></span>
+      <button data-act="tc" data-v="up" aria-label="Faster time">+</button>
+    </div>
+    <button data-act="pause" id="pauseBtn">Pause</button>
+    <button data-act="mute" id="muteBtn">Sound on</button>
+    <button data-act="help">Controls</button>
+  </header>
+
+  <main id="viewport">
+    <canvas id="main" aria-label="Tactical view"></canvas>
+    <div class="vtools tl">
+      <button data-act="view" data-v="chart" id="vChart" class="on">Chart <small>(V)</small></button>
+      <button data-act="view" data-v="scope" id="vScope">Periscope <small>(V)</small></button>
+    </div>
+    <div class="vtools tr" id="chartTools">
+      <button data-act="zoom" data-v="in" aria-label="Zoom in">+</button>
+      <button data-act="zoom" data-v="out" aria-label="Zoom out">−</button>
+      <button data-act="center">Center boat</button>
+    </div>
+    <div class="vtools br" id="scopeTools" hidden>
+      <button data-hold="-1" aria-label="Rotate left">◀</button>
+      <button data-hold="1" aria-label="Rotate right">▶</button>
+      <button data-act="szoom" id="szoomBtn">Zoom 1.5×</button>
+      <button data-act="sahead">Ahead</button>
+      <button data-act="lock">Lock</button>
+    </div>
+  </main>
+
+  <aside id="rack">
+    <section class="panel">
+      <h2>Helm &amp; dive <small id="modeTxt">Surfaced</small></h2>
+      <div class="readouts">
+        <div class="ro"><span>Heading</span><b id="roHdg">000°</b><i id="roHdgO">ordered 000°</i></div>
+        <div class="ro"><span>Speed</span><b id="roSpd">0.0</b><i id="roSpdO">knots</i></div>
+        <div class="ro"><span>Depth</span><b id="roDep">0 m</b><i id="roDepO">ordered 0 m</i></div>
+      </div>
+      <div class="row"><span class="lbl">Rudder</span>
+        <button data-act="hdg" data-v="-10">−10°</button><button data-act="hdg" data-v="-1">−1°</button>
+        <button data-act="hdg" data-v="1">+1°</button><button data-act="hdg" data-v="10">+10°</button>
+      </div>
+      <div class="tele" id="tele"></div>
+      <div class="row"><span class="lbl">Dive</span>
+        <button data-act="surface">Surface</button><button data-act="pscope">Periscope</button>
+        <button data-act="crash">Crash dive</button>
+      </div>
+      <div class="row"><span class="lbl">Depth</span>
+        <button data-act="depth" data-v="-10">−10 m</button><button data-act="depth" data-v="10">+10 m</button>
+        <button data-act="depth" data-v="50">+50 m</button>
+      </div>
+      <div class="row">
+        <button data-act="raise" id="raiseBtn" class="grow">Raise periscope</button>
+        <button data-act="silent" id="silentBtn" class="grow">Silent running</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Attack plot <small id="solTxt">no target</small></h2>
+      <div class="tdc">
+        <div class="wide"><span>Target</span><b id="tTgt">—</b></div>
+        <div><span>Range</span><b id="tRng">—</b></div>
+        <div><span>Bearing</span><b id="tBrg">—</b></div>
+        <div><span>AOB</span><b id="tAob">—</b></div>
+        <div><span>Speed</span><b id="tSpd">—</b></div>
+        <div><span>Gyro</span><b id="tGyro">—</b></div>
+        <div><span>Run</span><b id="tRun">—</b></div>
+      </div>
+      <div class="qbar" title="Firing solution quality"><i id="tQ"></i></div>
+      <div class="tubes" id="tubes"></div>
+      <div class="row"><span class="lbl">Run depth</span>
+        <button data-act="tdep" data-v="-1">−</button><span class="stat"><b id="tDep">3 m</b></span><button data-act="tdep" data-v="1">+</button>
+      </div>
+      <div class="row"><span class="lbl">Salvo</span>
+        <button data-act="salvo" data-v="1" class="sal">1</button><button data-act="salvo" data-v="2" class="sal">2</button><button data-act="salvo" data-v="3" class="sal">3</button><button data-act="salvo" data-v="4" class="sal">4</button>
+      </div>
+      <div class="row"><span class="lbl">Reload</span>
+        <button data-act="reload" data-v="G7a" id="rlA">G7a steam</button><button data-act="reload" data-v="G7e" id="rlE">G7e electric</button>
+        <span class="stat" id="stock"></span>
+      </div>
+      <div class="row">
+        <button data-act="lock" class="grow">Lock target (L)</button>
+        <button id="fire" data-act="fire">FIRE</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Boat <small id="pingTxt"></small></h2>
+      <div class="bars">
+        <div class="bar">Hull<div class="track"><i id="bHull"></i></div><em id="vHull">100%</em></div>
+        <div class="bar">Battery<div class="track"><i id="bBat"></i></div><em id="vBat">100%</em></div>
+        <div class="bar">Flooding<div class="track"><i id="bFlood"></i></div><em id="vFlood">0%</em></div>
+        <div class="bar">Noise<div class="track"><i id="bNoise"></i></div><em id="vNoise">—</em></div>
+      </div>
+      <div class="sys" id="sys"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Log</h2>
+      <ol id="log"></ol>
+    </section>
+  </aside>
+</div>
+
+<div id="overlay"><div class="card" id="card"></div></div>
+
+<script>
+'use strict';
+/* ============ constants & helpers ============ */
+const KN=0.514444, D2R=Math.PI/180, STEP=0.25;
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const wrap360=a=>((a%360)+360)%360;
+const angDiff=(a,b)=>(((b-a)%360)+540)%360-180;
+const brg=(ax,ay,bx,by)=>wrap360(Math.atan2(bx-ax,by-ay)/D2R);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const f0=n=>Math.round(n).toLocaleString('en-US');
+const p3=n=>String(Math.round(wrap360(n))%360).padStart(3,'0');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtT=t=>{const m=Math.floor(t/60);return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const dayN=t=>1+Math.floor(t/86400);
+const MONO="'JetBrains Mono',ui-monospace,Menlo,monospace", UIF="'Barlow Condensed','Arial Narrow',Arial,sans-serif";
+const PAL={chart:'#0f2429',grid:'rgba(143,162,156,.13)',gridTxt:'rgba(143,162,156,.55)',ink:'#dfe6dc',dim:'#8fa29c',brass:'#c8a35a',amber:'#f0b44c',alarm:'#e0533f',ok:'#79c08f',sub:'#8fe0a6',grey:'#6b7774'};
+
+const TELE=[{l:'Flank',f:1},{l:'Full',f:.85},{l:'Std',f:.62},{l:'⅔',f:.42},{l:'⅓',f:.22},{l:'Stop',f:0},{l:'Back',f:-.25}];
+const TORP={G7a:{kn:44,range:6000,wake:true,dud:.06},G7e:{kn:30,range:5000,wake:false,dud:.09}};
+const SYS={scope:'Periscope',hydro:'Hydrophones',diesel:'Diesels',planes:'Dive planes'};
+const CLS={
+  small:{name:'Small Merchant',kind:'merchant',ton:[2200,4200],L:92,B:13,draft:6,H:19,hp:1,maxKn:10,turn:1,prof:'small'},
+  freighter:{name:'Cargo Freighter',kind:'merchant',ton:[5000,8800],L:138,B:18,draft:8,H:25,hp:1.5,maxKn:11,turn:.8,prof:'freighter'},
+  tanker:{name:'Tanker',kind:'merchant',ton:[8000,11500],L:155,B:20,draft:9,H:21,hp:2.1,maxKn:11,turn:.7,prof:'tanker'},
+  liner:{name:'Troop Transport',kind:'merchant',ton:[12000,18500],L:175,B:22,draft:8.5,H:34,hp:2.6,maxKn:14,turn:.7,prof:'liner'},
+  destroyer:{name:'Destroyer',kind:'escort',ton:[1100,1450],L:96,B:9.5,draft:3.4,H:17,hp:.9,maxKn:30,turn:3,prof:'destroyer'},
+  corvette:{name:'Corvette',kind:'escort',ton:[900,1050],L:63,B:10,draft:3.6,H:15,hp:.8,maxKn:16,turn:2.6,prof:'corvette'},
+};
+// side profiles: u 0=stern..1=bow, v 0=waterline..1=masthead
+const PROF={
+  small:{hull:[[0,0],[0,.36],[.13,.36],[.13,.30],[.86,.30],[.87,.38],[1,.41],[.96,0]],blocks:[[.04,.16,.36,.5],[.5,.64,.30,.56]],funnels:[[.42,.47,.30,.8]],masts:[[.27,.95],[.79,.95]]},
+  freighter:{hull:[[0,0],[0,.33],[.08,.34],[.08,.38],[.18,.38],[.18,.31],[.84,.31],[.84,.40],[1,.43],[.95,0]],blocks:[[.42,.6,.31,.55],[.46,.57,.55,.63]],funnels:[[.52,.57,.55,.8]],masts:[[.25,.98],[.74,.98],[.12,.62]]},
+  tanker:{hull:[[0,0],[0,.31],[.2,.31],[.2,.26],[.86,.26],[.86,.33],[1,.36],[.96,0]],blocks:[[.02,.2,.31,.56],[.55,.64,.26,.56]],funnels:[[.07,.13,.56,.82]],masts:[[.4,.85],[.82,.85]]},
+  liner:{hull:[[0,.02],[0,.34],[.97,.35],[1,.39],[.95,0]],blocks:[[.15,.83,.34,.5],[.2,.76,.5,.61],[.3,.63,.61,.69]],funnels:[[.36,.42,.69,.92],[.5,.56,.69,.92]],masts:[[.1,1],[.89,1]]},
+  destroyer:{hull:[[0,.03],[0,.2],[.6,.2],[.6,.27],[.97,.28],[1,.31],[.94,0]],blocks:[[.66,.76,.27,.5],[.1,.16,.2,.3],[.82,.87,.28,.35]],funnels:[[.42,.47,.2,.48],[.52,.57,.2,.5]],masts:[[.71,1]]},
+  corvette:{hull:[[0,.03],[0,.22],[.62,.22],[.62,.32],[.97,.34],[1,.39],[.94,0]],blocks:[[.55,.68,.22,.6],[.86,.9,.34,.42]],funnels:[[.42,.5,.22,.58]],masts:[[.66,1]]},
+};
+const MN1=['Empire','Cape','Port','Glen','Loch','City of','King','Baron','Clan','Fort'];
+const MN2=['Ardent','Halberd','Merrow','Tolland','Bracken','Wexmoor','Sallow','Corran','Deverell','Ashby','Linmore','Pentire','Rowan','Garroch','Elstow','Harland','Kilbride','Morven','Tarbet','Wyvern'];
+const EN=['Vigilant','Harrow','Kestrel','Brambling','Sentinel','Wrangler','Bulwark','Thistle','Speedwell','Larkspur','Tenacious','Rapier','Mallow','Quillon'];
+
+/* ============ sound (Web Audio, synthesized) ============ */
+const SND={ctx:null,on:true,last:{},
+  init(){ if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    try{ const A=window.AudioContext||window.webkitAudioContext; this.ctx=new A();
+      this.out=this.ctx.createGain(); this.out.gain.value=.5; this.out.connect(this.ctx.destination);
+      const len=this.ctx.sampleRate*2, b=this.ctx.createBuffer(1,len,this.ctx.sampleRate), d=b.getChannelData(0); let l=0;
+      for(let i=0;i<len;i++){ const w=Math.random()*2-1; l=(l+.02*w)/1.02; d[i]=l*3.5; }
+      this.nb=b;
+      this.hum=this.ctx.createOscillator(); this.hum.type='sawtooth'; this.hum.frequency.value=38;
+      this.humF=this.ctx.createBiquadFilter(); this.humF.type='lowpass'; this.humF.frequency.value=110;
+      this.humG=this.ctx.createGain(); this.humG.gain.value=0;
+      this.hum.connect(this.humF).connect(this.humG).connect(this.out); this.hum.start();
+    }catch(e){ this.ctx=null; } },
+  ok(k,gap){ if(!this.ctx||!this.on) return false; const n=performance.now(); if(this.last[k]&&n-this.last[k]<gap) return false; this.last[k]=n; return true; },
+  env(g,t,a,p,d){ g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(Math.max(.0002,p),t+a); g.gain.exponentialRampToValueAtTime(.0001,t+a+d); },
+  tone(f,dur,vol,type='sine',f2=null,delay=0){ const c=this.ctx,t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur); this.env(g,t,.01,vol,dur); o.connect(g).connect(this.out); o.start(t); o.stop(t+dur+.1); },
+  noise(dur,freq,vol,type='lowpass',delay=0){ const c=this.ctx,t=c.currentTime+delay,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(); s.buffer=this.nb; f.type=type; f.frequency.value=freq; this.env(g,t,.02,vol,dur); s.connect(f).connect(g).connect(this.out); s.start(t); s.stop(t+dur+.2); },
+  ping(v){ if(!this.ok('ping',1400)) return; this.tone(1180,.9,.22*v); this.tone(1180,.7,.07*v,'sine',null,.55); },
+  boom(v){ if(!this.ok('boom',220)) return; this.noise(2.8,170,.9*v); this.tone(55,1.6,.6*v,'sine',28); },
+  launch(){ if(!this.ok('launch',150)) return; this.noise(.9,700,.35,'bandpass'); this.tone(90,.5,.22,'triangle',50); },
+  klaxon(){ if(!this.ok('klax',3000)) return; for(let i=0;i<3;i++) this.tone(300,.32,.12,'sawtooth',280,i*.42); },
+  creak(){ if(!this.ok('creak',4500)) return; this.tone(rnd(70,110),1.8,.12,'sawtooth',rnd(35,55)); },
+  clang(){ if(!this.ok('clang',400)) return; this.tone(640,.35,.15,'triangle',420); },
+  splash(){ if(!this.ok('splash',700)) return; this.noise(.6,1400,.18,'bandpass'); },
+  gun(v){ if(!this.ok('gun',300)) return; this.noise(.5,600,.45*v); },
+  humSet(level,freq){ if(!this.ctx) return; const t=this.ctx.currentTime; this.humG.gain.setTargetAtTime(this.on?level:0,t,.3); this.hum.frequency.setTargetAtTime(freq,t,.5); },
+};
+
+/* ============ state ============ */
+let G=null;
+const keys=new Set();
+let holdRot=0;
+
+function newGame(diff){
+  G={diff,t:14*3600+20*60,tc:1,paused:false,over:null,acc:0,view:'chart',
+    sub:{x:0,y:0,heading:0,orderHdg:0,speed:0,tele:2,depth:0,orderDepth:0,crash:false,scopeUp:false,silent:false,
+      battery:100,hull:100,flood:0,leak:0,noise:1,dmg:{scope:0,hydro:0,diesel:0,planes:0},wasSurf:true},
+    tubes:[{n:1,bow:true,type:'G7a',st:'loaded',rl:0,jam:0},{n:2,bow:true,type:'G7e',st:'loaded',rl:0,jam:0},
+      {n:3,bow:true,type:'G7a',st:'loaded',rl:0,jam:0},{n:4,bow:true,type:'G7e',st:'loaded',rl:0,jam:0},
+      {n:5,bow:false,type:'G7e',st:'loaded',rl:0,jam:0}],
+    stock:{G7a:5,G7e:4},reloadPref:'G7a',torpDepth:3,salvo:1,
+    ships:[],torps:[],charges:[],fx:[],contacts:{},lock:null,lockInfo:null,sol:null,
+    convoy:null,convoyNum:0,estimate:null,spawnT:0,encounterDone:false,
+    patrol:{tonnage:0,sunk:[]},encSunk:[],usedNames:[],
+    log:[],map:{cx:0,cy:0,scale:55,follow:true},scope:{rel:0,zoom:false,track:false},
+    shake:0,nextId:1,torpN:1,msg:{},pingedT:-1e9,reportCd:0};
+  const h=Math.round(rnd(0,359)); G.sub.heading=h; G.sub.orderHdg=h;
+  spawnConvoy();
+  log('Patrol begins. Running surfaced on diesels, standard speed.');
+  log('Tip: run surfaced at Full to get ahead of the convoy, then dive to periscope depth across its track.');
+  hideOverlay(); buildTubes(); syncButtons();
+}
+
+function genName(kind){
+  for(let i=0;i<40;i++){
+    const n=kind==='escort'?'HMS '+pick(EN):pick(MN1)+' '+pick(MN2);
+    if(!G.usedNames.includes(n)){ G.usedNames.push(n); return n; }
+  }
+  return 'SS Unknown '+G.nextId;
+}
+
+function stationPos(st){
+  const cv=G.convoy, fx=Math.sin(cv.course*D2R), fy=Math.cos(cv.course*D2R);
+  return {x:cv.x+fy*st.dx+fx*st.dy, y:cv.y-fx*st.dx+fy*st.dy};
+}
+
+function spawnConvoy(){
+  const s=G.sub, lvl=G.convoyNum++;
+  const d=rnd(17000,23000), b=rnd(0,360);
+  const cx=s.x+Math.sin(b*D2R)*d, cy=s.y+Math.cos(b*D2R)*d;
+  const course=wrap360(brg(cx,cy,s.x,s.y)+rnd(-30,30));
+  const kn=rnd(7,8.5);
+  G.convoy={id:(Math.random()<.5?'HX ':'SC ')+Math.floor(rnd(60,160)),x:cx,y:cy,base:course,course,speed:kn*KN,curSpeed:kn*KN,zigT:rnd(400,700),zigI:0,alertT:0,evade:0};
+  G.ships=[]; G.contacts={}; G.torps=[]; G.charges=[]; G.fx=[]; G.lock=null; G.lockInfo=null; G.sol=null; G.encSunk=[];
+  G.encounterDone=false; G.spawnT=G.t;
+  const nM=Math.min(5+lvl*2,12), cols=nM<=6?2:nM<=9?3:4, rows=Math.ceil(nM/cols);
+  let liner=lvl>=1&&Math.random()<.5;
+  for(let i=0;i<nM;i++){
+    const col=i%cols,row=Math.floor(i/cols);
+    let k; if(liner&&row===0&&col===Math.floor(cols/2)){ k='liner'; liner=false; }
+    else { const r=Math.random(); k=r<.3?'small':r<.78?'freighter':'tanker'; }
+    addShip(k,{dx:(col-(cols-1)/2)*850,dy:((rows-1)/2-row)*700});
+  }
+  const fw=rows*350, sw=cols*425;
+  const flank=Math.random()<.5?[{dx:-(sw+1500),dy:0},{dx:sw+1500,dy:0}]:[{dx:sw+1500,dy:0},{dx:-(sw+1500),dy:0}];
+  const st=[{dx:0,dy:fw+1800},flank[0],flank[1],{dx:0,dy:-(fw+1600)},{dx:-(sw+1200),dy:fw+1200}];
+  const nE=Math.min(2+Math.floor(lvl*.8),5);
+  for(let i=0;i<nE;i++) addShip(i===0||Math.random()<.45?'destroyer':'corvette',st[i]);
+  G.estimate={x:cx+rnd(-2500,2500),y:cy+rnd(-2500,2500),r:4000,course:Math.round(course/5)*5,kn:Math.round(kn)};
+  const eb=brg(s.x,s.y,G.estimate.x,G.estimate.y), ed=Math.hypot(G.estimate.x-s.x,G.estimate.y-s.y);
+  log(`BdU to all boats: convoy ${G.convoy.id} reported in your grid. Bearing ${p3(eb)}°, ${(ed/1000).toFixed(0)} km, course ${p3(G.estimate.course)}°, ${G.estimate.kn} knots. Attack at will.`,'radio');
+}
+
+function addShip(k,st){
+  const C=CLS[k], p=stationPos(st), hp=C.hp*rnd(.85,1.15);
+  G.ships.push({id:G.nextId++,cls:k,name:genName(C.kind),ton:Math.round(rnd(C.ton[0],C.ton[1])/10)*10,x:p.x,y:p.y,hdg:G.convoy.course,spd:G.convoy.speed,
+    st,hp,maxHp:hp,state:'ok',sinkP:0,sinkDur:0,tilt:Math.random()<.5?-1:1,weave:rnd(0,6.28),
+    ai:C.kind==='escort'?{state:'patrol',pingT:rnd(0,9),lk:null,runOut:0,dcCd:0,dcLeft:k==='destroyer'?70:45,gunT:3,searchT:0,ramCd:0,searchC:null}:null});
+}
+
+/* ============ log ============ */
+function log(msg,kind=''){ if(!G) return; G.log.unshift({t:G.t,msg,kind}); if(G.log.length>80) G.log.pop(); renderLog(); }
+function renderLog(){ $('#log').innerHTML=G.log.slice(0,60).map(l=>`<li class="${l.kind}"><time>${fmtT(l.t)}</time><span>${esc(l.msg)}</span></li>`).join(''); }
+
+/* ============ simulation ============ */
+function visibility(){
+  const h=(G.t/3600)%24;
+  if(h>=7.5&&h<18) return 1; if(h<6||h>=19.5) return .35;
+  if(h<7.5) return .35+.65*(h-6)/1.5; return 1-.65*(h-18)/1.5;
+}
+function setTC(v){ if(!G) return; G.tc=clamp(Math.round(v),1,128); G.tc=Math.min(G.tc,maxTC()); }
+function maxTC(){
+  for(const sh of G.ships) if(sh.ai&&sh.ai.state!=='patrol'&&sh.state!=='sunk'&&dist(sh,G.sub)<10000) return 4;
+  if(G.torps.length||G.charges.length) return 8;
+  return 128;
+}
+
+function step(dt){
+  G.t+=dt;
+  stepSub(dt); if(G.over) return;
+  stepShips(dt);
+  stepTorps(dt);
+  stepCharges(dt); if(G.over) return;
+  sensors(dt);
+  solution(dt);
+  stepTubes(dt);
+  for(const f of G.fx) f.t+=dt; G.fx=G.fx.filter(f=>f.t<f.life);
+  checkEncounter();
+  if(G.tc>maxTC()) G.tc=maxTC();
+}
+
+function stepSub(dt){
+  const s=G.sub, surf=s.depth<.5;
+  for(const k in s.dmg) if(s.dmg[k]>0){ s.dmg[k]-=dt; if(s.dmg[k]<=0){ s.dmg[k]=0; log(`Repairs complete: ${SYS[k]} back in service.`,'good'); } }
+  const maxKn=surf?(s.dmg.diesel>0?9:17.5):7.6;
+  let f=TELE[s.tele].f;
+  if(s.silent&&!surf) f=clamp(f,-.25,.22);
+  if(!surf&&s.battery<=0) f=0;
+  const acc=(surf?.09:.05)*dt;
+  s.speed+=clamp(f*maxKn*KN-s.speed,-acc,acc);
+  const rate=Math.min(3.5,.4+Math.abs(s.speed)*.55);
+  s.heading=wrap360(s.heading+clamp(angDiff(s.heading,s.orderHdg),-rate*dt,rate*dt));
+  s.x+=Math.sin(s.heading*D2R)*s.speed*dt; s.y+=Math.cos(s.heading*D2R)*s.speed*dt;
+  // depth
+  const planes=s.dmg.planes>0?.5:1, dz=s.orderDepth-s.depth;
+  const down=(.35+.11*Math.abs(s.speed))*(s.crash?2.2:1)*planes, up=(.5+.08*Math.abs(s.speed))*planes*(s.orderDepth===0?1.8:1);
+  let v=dz>0?Math.min(down,dz/dt):Math.max(-up,dz/dt);
+  if(s.flood>40) v+=(s.flood-40)/60*.7;
+  s.depth=Math.max(0,s.depth+v*dt);
+  if(s.crash&&s.depth>=s.orderDepth-1) s.crash=false;
+  const nowSurf=s.depth<.5;
+  if(nowSurf&&!s.wasSurf){ log('Surfaced. Diesels engaged, charging batteries.'); }
+  if(!nowSurf&&s.wasSurf){ log('Boat is under. Running on electric motors.'); }
+  s.wasSurf=nowSurf;
+  if(s.depth>14.5&&s.scopeUp){ s.scopeUp=false; }
+  // battery
+  if(!nowSurf){
+    const fr=Math.abs(s.speed)/(7.6*KN);
+    s.battery=Math.max(0,s.battery-(.0012+.016*fr*fr)*dt);
+    if(s.battery<20&&!G.msg.bat20){ G.msg.bat20=1; log('Battery below 20%. Slow down or surface soon.','bad'); }
+    if(s.battery<=0&&!G.msg.bat0){ G.msg.bat0=1; log('Batteries exhausted. Motors stopped. Surface to recharge.','bad'); setTC(1); }
+  } else {
+    const fr=s.speed/(17.5*KN);
+    s.battery=Math.min(100,s.battery+(s.dmg.diesel?.004:.012)*(fr<.7?1:.35)*dt);
+    if(s.battery>30){ G.msg.bat20=0; G.msg.bat0=0; }
+  }
+  s.noise=nowSurf?1:clamp(.04+Math.pow(Math.abs(s.speed)/(7.6*KN),1.3)*(s.silent?.45:.95),0,1);
+  // pressure hull
+  const crush=230-(100-s.hull)*.6;
+  if(s.depth>crush-25) SND.creak();
+  if(s.depth>crush){
+    if(!G.msg.crush){ G.msg.crush=1; log('Hull is buckling. We are below crush depth. Come up!','bad'); setTC(1); }
+    damageSub((.4+(s.depth-crush)*.06)*dt,'crush',true); if(G.over) return;
+  } else if(s.depth<crush-30) G.msg.crush=0;
+  // flooding
+  s.flood=clamp(s.flood+s.leak*dt-(nowSurf?.25:.05)*dt,0,100);
+  s.leak=Math.max(0,s.leak-.0035*dt);
+  if(s.flood>=100) lose('flood');
+}
+
+function damageSub(dmg,src,quiet){
+  const s=G.sub; if(G.diff==='recruit') dmg*=.6;
+  s.hull=Math.max(0,s.hull-dmg);
+  if(quiet){ if(s.hull<=0) lose(src); return; }
+  s.leak+=dmg*.006;
+  for(const k in SYS) if(s.dmg[k]<=0&&Math.random()<dmg/90){ s.dmg[k]=rnd(500,1500); log(`${SYS[k]} damaged! Repair crew working.`,'bad'); }
+  if(Math.random()<dmg/120){ const t=pick(G.tubes); if(!t.jam){ t.jam=rnd(600,1200); log(`Tube ${t.n} jammed by the blast.`,'bad'); } }
+  log(dmg>20?`Heavy damage! Hull integrity ${Math.round(s.hull)}%.`:dmg>7?`Damage report: leaks forward. Hull ${Math.round(s.hull)}%.`:'Close explosion. Light bulbs shattered, minor leaks.','bad');
+  G.shake=Math.max(G.shake,Math.min(18,dmg*.8+3));
+  setTC(1);
+  if(s.hull<=0) lose(src);
+}
+
+function lose(reason){
+  if(G.over) return;
+  G.over={win:false,reason}; G.paused=true;
+  showLoss();
+}
+
+function stepShips(dt){
+  const cv=G.convoy, s=G.sub, vis=visibility();
+  if(cv){
+    cv.zigT-=dt; if(cv.zigT<=0){ cv.zigI=(cv.zigI+1)%4; cv.zigT=rnd(480,780); }
+    const zig=[0,30,0,-30][cv.zigI];
+    cv.alertT=Math.max(0,cv.alertT-dt);
+    const tgt=cv.base+zig+(cv.alertT>0?cv.evade:0);
+    cv.course=wrap360(cv.course+clamp(angDiff(cv.course,tgt),-.35*dt,.35*dt));
+    cv.curSpeed=cv.speed*(cv.alertT>0?1.15:1);
+    cv.x+=Math.sin(cv.course*D2R)*cv.curSpeed*dt; cv.y+=Math.cos(cv.course*D2R)*cv.curSpeed*dt;
+  }
+  G.reportCd=Math.max(0,G.reportCd-dt);
+  for(const sh of G.ships){
+    if(sh.state==='sunk') continue;
+    const C=CLS[sh.cls];
+    if(sh.state==='sinking'){
+      sh.sinkP+=dt/sh.sinkDur; sh.spd=Math.max(0,sh.spd-.05*dt);
+      sh.x+=Math.sin(sh.hdg*D2R)*sh.spd*dt; sh.y+=Math.cos(sh.hdg*D2R)*sh.spd*dt;
+      if(sh.sinkP>=1){ sh.state='sunk'; sh.sinkP=1; G.patrol.tonnage+=sh.ton; const rec={name:sh.name,cls:C.name,ton:sh.ton,t:G.t}; G.patrol.sunk.push(rec); G.encSunk.push(rec);
+        log(`${sh.name} (${C.name}, ${f0(sh.ton)} GRT) has gone under.`,'good'); if(G.lock===sh.id){ G.lock=null; G.lockInfo=null; } }
+      continue;
+    }
+    let th=sh.hdg, ts=sh.spd;
+    if(C.kind==='merchant'){
+      if(sh.state==='damaged'){ ts=3.5*KN; }
+      else if(cv){
+        const sp=stationPos(sh.st), fx=Math.sin(cv.course*D2R), fy=Math.cos(cv.course*D2R);
+        th=brg(sh.x,sh.y,sp.x+fx*cv.curSpeed*150,sp.y+fy*cv.curSpeed*150);
+        const along=(sp.x-sh.x)*fx+(sp.y-sh.y)*fy;
+        ts=clamp(cv.curSpeed+along*.004,cv.curSpeed*.5,C.maxKn*KN);
+      }
+      // merchant lookouts can spot a surfaced boat and radio the escorts
+      if(s.depth<.5&&G.reportCd<=0){
+        const r=dist(sh,s), R=4500*vis;
+        if(r<R&&Math.random()<.04*(1-r/R)*dt*(G.diff==='recruit'?.6:1)){
+          G.reportCd=120;
+          const e=G.ships.filter(x=>x.ai&&x.state==='ok'&&x.ai.state==='patrol').sort((a,b)=>dist(a,s)-dist(b,s))[0];
+          if(e) escortContact(e,'report',r+800);
+        }
+      }
+    } else { const o=escortAI(sh,dt); th=o.h; ts=o.s; if(sh.state==='damaged') ts=Math.min(ts,6*KN); }
+    const rate=C.turn;
+    sh.hdg=wrap360(sh.hdg+clamp(angDiff(sh.hdg,th),-rate*dt,rate*dt));
+    const acc=(C.kind==='escort'?.22:.05)*dt;
+    sh.spd+=clamp(ts-sh.spd,-acc,acc);
+    sh.x+=Math.sin(sh.hdg*D2R)*sh.spd*dt; sh.y+=Math.cos(sh.hdg*D2R)*sh.spd*dt;
+  }
+}
+
+function escortContact(e,how,r){
+  const s=G.sub, ai=e.ai;
+  const err=how==='visual'?r*.02+30:how==='report'?600:r*.06+40;
+  const a=rnd(0,6.283), m=rnd(0,err);
+  const est=how==='asdic'||how==='hydro'?rnd(.4,1.1):0;
+  ai.lk={x:s.x+Math.cos(a)*m,y:s.y+Math.sin(a)*m,depth:s.depth<.5?0:clamp(s.depth+rnd(-30,30),12,220),t:G.t,
+    vx:Math.sin(s.heading*D2R)*s.speed*est,vy:Math.cos(s.heading*D2R)*s.speed*est};
+  if(ai.state==='patrol'){
+    ai.state='hunt'; ai.runOut=0;
+    const near=dist(e,s)<10000;
+    if(near){
+      log(s.depth<.5?'Bridge: escort turning toward us, bow wave rising!':'Sonar: escort screws speeding up. She is turning toward us!','bad');
+      setTC(1);
+    }
+    if(G.convoy&&G.convoy.alertT<=0){ const away=wrap360(brg(s.x,s.y,G.convoy.x,G.convoy.y)); G.convoy.alertT=900; G.convoy.evade=clamp(angDiff(G.convoy.base,away),-60,60); }
+    // call one more escort to help
+    const hunters=G.ships.filter(x=>x.ai&&x.ai.state!=='patrol'&&x.state!=='sunk').length;
+    if(hunters<2){
+      const o=G.ships.filter(x=>x.ai&&x.ai.state==='patrol'&&x.state==='ok'&&x!==e).sort((a,b)=>dist(a,e)-dist(b,e))[0];
+      if(o&&Math.random()<.6){ o.ai.state='hunt'; o.ai.lk={...ai.lk}; }
+    }
+  }
+  if(ai.state==='search') ai.state='hunt';
+}
+
+function escortAI(e,dt){
+  const ai=e.ai, s=G.sub, C=CLS[e.cls], r=dist(e,s), vis=visibility();
+  const subm=s.depth>=.5, hunting=ai.state!=='patrol';
+  const dmul=G.diff==='recruit'?.6:1;
+  ai.dcCd=Math.max(0,ai.dcCd-dt); ai.ramCd=Math.max(0,ai.ramCd-dt);
+  // active sonar (ASDIC)
+  ai.pingT-=dt;
+  if(ai.pingT<=0){
+    ai.pingT=hunting?4:9;
+    if(subm&&r<5000){ if(hunting) SND.ping(1-r/5000); if(r<3200) G.pingedT=G.t; }
+    if(subm&&r<2400&&r>120&&e.state==='ok'){
+      const p=(hunting?.6:.28)*(1-r/2400)*(1-Math.min(s.depth,250)/420)*(s.silent?.8:1)*dmul;
+      if(Math.random()<p) escortContact(e,'asdic',r);
+    }
+  }
+  // lookouts and hydrophones
+  let p=0;
+  if(!subm){ const R=8000*vis; if(r<R) p+=.07*(1-r/R)+.008; }
+  else {
+    if(s.depth<=14&&s.scopeUp&&s.speed>1){ const R=1500*vis; if(r<R) p+=.06*(1-r/R); }
+    const R=300+4000*s.noise*(e.spd<9*KN?1:.35); if(r<R) p+=.04*(1-r/R);
+  }
+  if(p>0&&Math.random()<p*dt*dmul) escortContact(e,subm?'hydro':'visual',r);
+  // gunfire at a surfaced boat
+  if(!subm&&hunting&&ai.lk&&ai.lk.depth===0&&r<6000){
+    ai.gunT-=dt;
+    if(ai.gunT<=0){ ai.gunT=rnd(4,7); SND.gun(1-r/7000);
+      if(Math.random()<.35*(1-r/6000)*vis) damageSub(rnd(3,8),'gun');
+      else if(!G.msg.shells||G.t-G.msg.shells>60){ G.msg.shells=G.t; log('Shells falling close! Dive!','bad'); setTC(1); }
+      G.fx.push({type:'splash',x:s.x+rnd(-60,60),y:s.y+rnd(-60,60),t:0,life:3});
+    }
+  }
+  // ramming
+  if(r<28&&s.depth<12&&ai.ramCd<=0){ ai.ramCd=60; e.hp-=.25; log('RAMMED! The escort has run over us!','bad'); damageSub(rnd(30,50),'ram'); }
+
+  if(ai.state==='patrol'){
+    if(!G.convoy) return {h:e.hdg,s:10*KN};
+    const cv=G.convoy, sp=stationPos({dx:e.st.dx+Math.sin(G.t/70+e.weave)*500,dy:e.st.dy});
+    const fx=Math.sin(cv.course*D2R), fy=Math.cos(cv.course*D2R);
+    const along=(sp.x-e.x)*fx+(sp.y-e.y)*fy;
+    return {h:brg(e.x,e.y,sp.x+fx*cv.curSpeed*90,sp.y+fy*cv.curSpeed*90),s:clamp(cv.curSpeed+along*.006,cv.curSpeed*.6,C.maxKn*KN*.75)};
+  }
+  if(ai.state==='hunt'){
+    const lk=ai.lk, age=G.t-lk.t;
+    if(ai.runOut>0){ ai.runOut-=dt; return {h:e.hdg,s:C.maxKn*KN*.8}; }
+    const px=lk.x+lk.vx*Math.min(age,150), py=lk.y+lk.vy*Math.min(age,150);
+    const d=Math.hypot(px-e.x,py-e.y);
+    if(d<90&&ai.dcCd<=0&&lk.depth>5&&ai.dcLeft>0){ dropPattern(e,lk.depth); ai.dcCd=55; ai.runOut=40; }
+    if(age>420){ ai.state='search'; ai.searchT=300; ai.searchC={x:px,y:py}; }
+    return {h:brg(e.x,e.y,px,py),s:d>1500?C.maxKn*KN:Math.min(14,C.maxKn)*KN};
+  }
+  // search: circle the last datum, then give up
+  ai.searchT-=dt;
+  if(ai.searchT<=0){ ai.state='patrol'; ai.lk=null; if(r<9000) log('Sonar: escort screws fading. She is returning to the convoy.','good'); return {h:e.hdg,s:12*KN}; }
+  const a=G.t/40+e.weave, tx=ai.searchC.x+Math.sin(a)*900, ty=ai.searchC.y+Math.cos(a)*900;
+  return {h:brg(e.x,e.y,tx,ty),s:10*KN};
+}
+
+function dropPattern(e,depth){
+  const fx=Math.sin(e.hdg*D2R), fy=Math.cos(e.hdg*D2R), n=e.cls==='destroyer'?10:6;
+  for(let i=0;i<n;i++){
+    const along=-20-(i%5)*22, lat=i>=5?(i%2?60:-60):0;
+    G.charges.push({x:e.x+fx*along+fy*lat,y:e.y+fy*along-fx*lat,z:0,set:clamp(depth+rnd(-22,22),12,250),delay:i*1.2});
+  }
+  e.ai.dcLeft-=n;
+  if(G.sub.depth>=.5){ log('Hydrophones: splashes astern of the escort. Depth charges!','bad'); setTC(1); }
+  SND.splash();
+}
+
+function stepCharges(dt){
+  const s=G.sub;
+  for(const c of G.charges){
+    if(c.delay>0){ c.delay-=dt; continue; }
+    c.z+=3.2*dt;
+    if(c.z>=c.set){
+      c.dead=true;
+      const d=Math.hypot(c.x-s.x,c.y-s.y,c.z-s.depth);
+      G.fx.push({type:'dc',x:c.x,y:c.y,t:0,life:6});
+      SND.boom(clamp(1/(1+d/140),.15,1));
+      if(s.depth>=.5&&d<100){ const k=(100-d)/100; damageSub(k*k*55,'dc'); if(G.over) return; }
+      else if(d<400) G.shake=Math.max(G.shake,4*(1-d/400));
+    }
+  }
+  G.charges=G.charges.filter(c=>!c.dead);
+}
+
+function stepTubes(dt){
+  const silent=G.sub.silent;
+  for(const tb of G.tubes){
+    if(tb.jam>0){ tb.jam-=dt; if(tb.jam<=0){ tb.jam=0; log(`Tube ${tb.n} cleared and back in service.`,'good'); } continue; }
+    if(tb.st==='empty'&&!silent){
+      const type=G.stock[G.reloadPref]>0?G.reloadPref:G.stock.G7a>0?'G7a':G.stock.G7e>0?'G7e':null;
+      if(type){ G.stock[type]--; tb.st='loading'; tb.type=type; tb.rl=0; }
+    } else if(tb.st==='loading'&&!silent){
+      tb.rl+=dt/(tb.bow?540:720);
+      if(tb.rl>=1){ tb.st='loaded'; tb.rl=0; log(`Tube ${tb.n} reloaded (${tb.type}).`); }
+    }
+  }
+}
+
+function torpCount(){ return G.stock.G7a+G.stock.G7e+G.tubes.filter(t=>t.st!=='empty').length; }
+
+function hitTest(t,sh){
+  const C=CLS[sh.cls], dx=t.x-sh.x, dy=t.y-sh.y, fx=Math.sin(sh.hdg*D2R), fy=Math.cos(sh.hdg*D2R);
+  return Math.abs(dx*fx+dy*fy)<C.L/2&&Math.abs(dx*fy-dy*fx)<C.B/2+1.5;
+}
+
+function stepTorps(dt){
+  const vis=visibility();
+  for(const t of G.torps){
+    t.hdg=wrap360(t.hdg+clamp(angDiff(t.hdg,t.course),-25*dt,25*dt));
+    const d=t.spd*dt;
+    t.x+=Math.sin(t.hdg*D2R)*d; t.y+=Math.cos(t.hdg*D2R)*d; t.run+=d;
+    if(t.run-t.lastTrail>60){ t.trail.push([t.x,t.y]); t.lastTrail=t.run; }
+    if(t.run>t.range){ t.dead=true; log(`Torpedo ${t.n} ran out of fuel and sank.`); continue; }
+    for(const sh of G.ships){
+      if(sh.state==='sunk'||sh.state==='sinking') continue;
+      if(hitTest(t,sh)){ torpHit(t,sh); if(t.dead) break; }
+    }
+    // steam torpedo wakes can be spotted in daylight
+    if(!t.dead&&TORP[t.type].wake&&vis>.5){
+      for(const e of G.ships) if(e.ai&&e.ai.state==='patrol'&&e.state==='ok'&&dist(e,t)<1300&&Math.random()<.025*dt){
+        e.ai.state='hunt'; e.ai.lk={x:t.ox+rnd(-300,300),y:t.oy+rnd(-300,300),depth:30,t:G.t,vx:0,vy:0};
+        log('Lookouts on the escorts have seen our torpedo wake.','bad');
+      }
+    }
+  }
+  G.torps=G.torps.filter(t=>!t.dead);
+}
+
+function torpHit(t,sh){
+  const C=CLS[sh.cls];
+  if(t.run<300){ t.dead=true; SND.clang(); log(`Torpedo ${t.n} struck the ${C.name} before arming. No detonation.`,'bad'); alertConvoy(t,sh); return; }
+  if(t.depth>C.draft+.5){ if(!t.under.includes(sh.id)){ t.under.push(sh.id); log(`Torpedo ${t.n} ran under the ${C.name}. Set it shallower than ~${C.draft} m.`,'bad'); } return; }
+  t.dead=true;
+  if(Math.random()<TORP[t.type].dud){ SND.clang(); log(`Torpedo ${t.n} hit the ${C.name}: a dud. We heard it clang off the hull.`,'bad'); alertConvoy(t,sh); return; }
+  const dmg=rnd(.75,1.35)*(t.depth>=C.draft-2.5?1.2:1);
+  sh.hp-=dmg;
+  G.fx.push({type:'boom',x:t.x,y:t.y,t:0,life:8,ship:sh.id});
+  SND.boom(clamp(1/(1+dist(t,G.sub)/2500),.3,1));
+  G.shake=Math.max(G.shake,3);
+  const runS=Math.round(t.run/t.spd);
+  if(sh.hp<=0){
+    sh.state='sinking'; sh.sinkDur=rnd(90,320)*(C.kind==='escort'?.6:1);
+    log(`Torpedo ${t.n} hit after ${runS} s! The ${C.name} is breaking up.`,'good');
+  } else {
+    sh.state='damaged';
+    log(`Torpedo ${t.n} hit after ${runS} s! The ${C.name} is burning and losing way.`,'good');
+  }
+  alertConvoy(t,sh); setTC(1);
+}
+
+function alertConvoy(t,sh){
+  const cv=G.convoy;
+  if(cv){ const away=brg(t.ox,t.oy,cv.x,cv.y); cv.alertT=1200; cv.evade=clamp(angDiff(cv.base,away),-60,60); }
+  const err=TORP[t.type].wake&&visibility()>.5?350:1500;
+  let gx=t.ox, gy=t.oy;
+  if(err>1000){ const back=wrap360(t.hdg+180); gx=t.x+Math.sin(back*D2R)*2200; gy=t.y+Math.cos(back*D2R)*2200; }
+  const es=G.ships.filter(e=>e.ai&&e.state!=='sunk'&&e.state!=='sinking'&&dist(e,sh)<8000).sort((a,b)=>dist(a,sh)-dist(b,sh)).slice(0,2);
+  for(const e of es){ if(e.ai.state==='patrol'){ e.ai.state='hunt'; e.ai.runOut=0; } e.ai.lk={x:gx+rnd(-err,err)*.6,y:gy+rnd(-err,err)*.6,depth:rnd(25,60),t:G.t,vx:0,vy:0}; }
+  if(es.length) log('Escorts racing toward our firing position.','bad');
+}
+
+function sensors(dt){
+  const s=G.sub, vis=visibility();
+  const eyes=s.depth<.5?'bridge':(s.depth<=14&&s.scopeUp&&!s.dmg.scope)?'scope':null;
+  const ears=s.depth>=6&&!s.dmg.hydro;
+  for(const sh of G.ships){
+    const c=G.contacts[sh.id]||(G.contacts[sh.id]={seen:false,lastT:-1e9,x:0,y:0,hdg:0,visible:false,hb:0,hT:-1e9,heard:false});
+    if(sh.state==='sunk'){ c.visible=false; continue; }
+    const C=CLS[sh.cls], r=dist(s,sh);
+    let visible=false;
+    if(eyes){ const R=(eyes==='bridge'?13000:9500)*vis*(.6+.4*C.H/24); visible=r<R; }
+    if(visible){
+      if(!c.seen||G.t-c.lastT>900){
+        log(`${eyes==='bridge'?'Lookout':'Periscope'}: ${C.kind==='escort'?'warship':'merchant'} bearing ${p3(brg(s.x,s.y,sh.x,sh.y))}°, range ${(r/1000).toFixed(1)} km.`);
+        if(!c.seen&&!G.msg.firstSight){ G.msg.firstSight=1; setTC(1); }
+      }
+      c.seen=true; c.lastT=G.t; c.x=sh.x; c.y=sh.y; c.hdg=sh.hdg;
+    }
+    c.visible=visible;
+    if(ears){
+      const noise=sh.spd/KN*(C.kind==='escort'?1.4:1)*(sh.state==='sinking'?.3:1);
+      const R=(2500+noise*1500)*(s.speed>5*KN?.5:1);
+      if(r<R){
+        c.hb=wrap360(brg(s.x,s.y,sh.x,sh.y)+rnd(-1.5,1.5)); c.hT=G.t; c.hEsc=C.kind==='escort'&&r<8000;
+        if(!c.heard&&!visible){ c.heard=true; log(`Sonar: ${r<8000?(C.kind==='escort'?'fast warship screws':'slow merchant screws'):'propeller noise'}, bearing ${p3(c.hb)}°.`); }
+      }
+    }
+  }
+}
+
+/* ============ fire control ============ */
+function lockShip(sh){
+  if(!sh) return;
+  if(G.lock!==sh.id){
+    const k=G.diff==='recruit'?.35:1;
+    G.lock=sh.id;
+    G.lockInfo={q:0,eC:rnd(-1,1)*32*k,eS:rnd(-1,1)*3.5*k,eR:rnd(-1,1)*.3*k,tx:sh.x,ty:sh.y,th:sh.hdg,ts:sh.spd,tT:G.t};
+    const C=CLS[sh.cls];
+    log(`Target locked: ${C.name}, est. ${f0(Math.round(sh.ton/500)*500)} GRT. Observing to refine the solution.`);
+  }
+}
+function displayed(sh){ const c=G.contacts[sh.id]; return sh.state!=='sunk'&&(G.diff==='recruit'||(c&&c.visible)); }
+
+function solution(dt){
+  const s=G.sub;
+  if(!G.lock){ G.sol=null; return; }
+  const sh=G.ships.find(x=>x.id===G.lock);
+  if(!sh||sh.state==='sunk'){ G.lock=null; G.lockInfo=null; G.sol=null; return; }
+  const L=G.lockInfo, c=G.contacts[sh.id];
+  const obs=G.diff==='recruit'?dist(s,sh)<15000:c&&c.visible;
+  if(obs){ L.q=Math.min(1,L.q+dt/75); L.tx=sh.x; L.ty=sh.y; L.th=sh.hdg; L.ts=sh.spd; L.tT=G.t; }
+  const age=G.t-L.tT, e=1-L.q;
+  const course=wrap360(L.th+L.eC*e), spd=Math.max(0,L.ts+L.eS*KN*e);
+  const tb=brg(s.x,s.y,L.tx,L.ty), tr=Math.hypot(L.tx-s.x,L.ty-s.y)*(1+L.eR*e);
+  const vx=Math.sin(course*D2R)*spd, vy=Math.cos(course*D2R)*spd;
+  const px=s.x+Math.sin(tb*D2R)*tr+vx*age, py=s.y+Math.cos(tb*D2R)*tr+vy*age;
+  // choose bow or stern by where the target is
+  const rel=angDiff(s.heading,brg(s.x,s.y,px,py));
+  const bow=Math.abs(rel)<=100;
+  const tube=G.tubes.find(t=>t.bow===bow&&t.st==='loaded'&&!t.jam)||G.tubes.find(t=>t.bow===bow);
+  const T=TORP[tube.type];
+  const off=bow?35:-35, lx=s.x+Math.sin(s.heading*D2R)*off, ly=s.y+Math.cos(s.heading*D2R)*off;
+  const ic=intercept(lx,ly,px,py,vx,vy,T.kn*KN);
+  const range=Math.hypot(px-s.x,py-s.y), bearing=brg(s.x,s.y,px,py);
+  const aob=angDiff(course,brg(px,py,s.x,s.y));
+  let gyro=null,run=null,ix=null,iy=null,inRange=false,ok=false;
+  if(ic){ const cc=brg(lx,ly,ic.x,ic.y); gyro=angDiff(bow?s.heading:wrap360(s.heading+180),cc); run=ic.t; ix=ic.x; iy=ic.y; inRange=ic.t*T.kn*KN<=T.range; ok=Math.abs(gyro)<=90; }
+  G.sol={id:sh.id,cls:CLS[sh.cls].name,range,bearing,aob,spdKn:spd/KN,gyro,run,ix,iy,inRange,ok,bow,q:L.q,course:ic?brg(lx,ly,ic.x,ic.y):null,type:tube.type};
+}
+
+function intercept(ox,oy,px,py,vx,vy,vt){
+  const dx=px-ox, dy=py-oy, a=vx*vx+vy*vy-vt*vt, b=2*(dx*vx+dy*vy), c=dx*dx+dy*dy;
+  let t;
+  if(Math.abs(a)<1e-9) t=-c/b;
+  else { const disc=b*b-4*a*c; if(disc<0) return null; const r1=(-b-Math.sqrt(disc))/(2*a), r2=(-b+Math.sqrt(disc))/(2*a); const pos=[r1,r2].filter(x=>x>0); if(!pos.length) return null; t=Math.min(...pos); }
+  if(!(t>0)) return null;
+  return {t,x:px+vx*t,y:py+vy*t};
+}
+
+function fire(){
+  if(!G||G.over||G.paused) return;
+  const s=G.sub;
+  if(s.depth>16){ log('Too deep to fire. Come up to periscope depth (14 m or shallower).','bad'); return; }
+  let course, bow;
+  const sol=G.sol;
+  if(sol&&sol.course!==null&&sol.ok){ course=sol.course; bow=sol.bow; }
+  else {
+    const rel=G.view==='scope'?G.scope.rel:0;
+    bow=Math.abs(rel)<=90;
+    course=wrap360(s.heading+rel);
+    if(sol&&!sol.ok) log('No gyro solution within ±90°. Firing along the line of sight instead.');
+  }
+  const ready=G.tubes.filter(t=>t.bow===bow&&t.st==='loaded'&&!t.jam);
+  if(!ready.length){ log(`No ${bow?'bow':'stern'} tube is loaded.`,'bad'); return; }
+  const n=Math.min(G.salvo,ready.length), spread=2.2, fired=[];
+  for(let i=0;i<n;i++){
+    const tb=ready[i], T=TORP[tb.type], off=bow?35:-35;
+    const lx=s.x+Math.sin(s.heading*D2R)*off, ly=s.y+Math.cos(s.heading*D2R)*off;
+    const c=wrap360(course+(i-(n-1)/2)*spread);
+    G.torps.push({n:G.torpN++,x:lx,y:ly,ox:lx,oy:ly,hdg:bow?s.heading:wrap360(s.heading+180),course:c,spd:T.kn*KN,range:T.range,run:0,type:tb.type,depth:G.torpDepth,trail:[[lx,ly]],lastTrail:0,under:[]});
+    tb.st='empty'; tb.rl=0; fired.push(tb.n);
+  }
+  SND.launch();
+  log(`Tube${fired.length>1?'s':''} ${fired.join(', ')}: los! ${n>1?n+' torpedoes':'Torpedo'} running, course ${p3(course)}°, depth ${G.torpDepth} m${sol&&sol.run&&sol.ok?`, est. run ${Math.round(sol.run)} s`:''}.`);
+}
+
+/* ============ encounter flow ============ */
+function checkEncounter(){
+  if(G.encounterDone||!G.convoy) return;
+  const alive=G.ships.filter(x=>x.state!=='sunk');
+  const mAlive=alive.filter(x=>CLS[x.cls].kind==='merchant'&&x.state!=='sinking');
+  const sinking=alive.some(x=>x.state==='sinking');
+  let kind=null;
+  if(!mAlive.length&&!sinking) kind='destroyed';
+  else if(!sinking&&alive.every(x=>dist(x,G.sub)>40000)) kind='escaped';
+  else if(G.t-G.spawnT>14*3600) kind='escaped';
+  if(kind){ G.encounterDone=true; G.paused=true; showDebrief(kind); }
+}
+
+function nextConvoy(){
+  const s=G.sub;
+  const hours=Math.round(rnd(14,40));
+  G.t+=hours*3600;
+  s.battery=100; s.flood=0; s.leak=0; for(const k in s.dmg) s.dmg[k]=0; for(const t of G.tubes) t.jam=0;
+  s.depth=0; s.orderDepth=0; s.scopeUp=false; s.silent=false; s.tele=2; s.speed=8*KN; s.wasSurf=true; s.crash=false;
+  // reload empty tubes during the transit
+  for(const t of G.tubes){ t.rl=0; if(t.st==='loading') t.st='loaded'; else if(t.st==='empty'){ const ty=G.stock[G.reloadPref]>0?G.reloadPref:G.stock.G7a>0?'G7a':G.stock.G7e>0?'G7e':null; if(ty){ G.stock[ty]--; t.type=ty; t.st='loaded'; } } }
+  G.msg={};
+  log(`${hours} hours later. Batteries charged, repairs complete, tubes reloaded.`,'good');
+  spawnConvoy();
+  G.paused=false; G.tc=1; hideOverlay(); syncButtons();
+}
+
+/* ============ rendering ============ */
+const cv=$('#main'), ctx=cv.getContext('2d');
+let VW=0,VH=0,DPR=1;
+function resize(){ const r=cv.getBoundingClientRect(); DPR=Math.min(2,window.devicePixelRatio||1); VW=r.width; VH=r.height; cv.width=Math.max(1,Math.round(VW*DPR)); cv.height=Math.max(1,Math.round(VH*DPR)); }
+new ResizeObserver(resize).observe(cv); resize();
+
+function niceStep(m){ for(const s of [100,200,500,1000,2000,5000,10000,20000,50000]) if(s>=m) return s; return 100000; }
+
+function drawChart(W,H){
+  const m=G.map, s=G.sub, sc=m.scale;
+  if(m.follow){ m.cx=s.x; m.cy=s.y; }
+  const X=x=>W/2+(x-m.cx)/sc, Y=y=>H/2-(y-m.cy)/sc;
+  ctx.fillStyle=PAL.chart; ctx.fillRect(0,0,W,H);
+  // grid
+  const stp=niceStep(sc*110);
+  ctx.lineWidth=1; ctx.strokeStyle=PAL.grid; ctx.fillStyle=PAL.gridTxt; ctx.font=`10px ${MONO}`; ctx.textBaseline='top';
+  const kmL=v=>(v/1000).toFixed(stp<1000?1:0);
+  for(let x=Math.floor((m.cx-W/2*sc)/stp)*stp;x<=m.cx+W/2*sc;x+=stp){ const px=Math.round(X(x))+.5; ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke(); ctx.fillText(kmL(x),px+3,H-14); }
+  for(let y=Math.floor((m.cy-H/2*sc)/stp)*stp;y<=m.cy+H/2*sc;y+=stp){ const py=Math.round(Y(y))+.5; ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke(); ctx.fillText(kmL(y),W-34,py+3); }
+  ctx.textBaseline='alphabetic';
+  // range rings
+  ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(121,192,143,.25)';
+  for(const r of [1000,5000]){ ctx.beginPath(); ctx.arc(X(s.x),Y(s.y),r/sc,0,7); ctx.stroke(); }
+  ctx.fillStyle='rgba(121,192,143,.45)'; ctx.font=`10px ${MONO}`; ctx.fillText('5 km',X(s.x)+5000/sc*.707+4,Y(s.y)-5000/sc*.707);
+  // BdU estimate
+  const anySeen=Object.values(G.contacts).some(c=>c.seen);
+  if(G.estimate&&!anySeen&&G.diff!=='recruit'){
+    const e=G.estimate;
+    ctx.strokeStyle='rgba(240,180,76,.55)'; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.arc(X(e.x),Y(e.y),e.r/sc,0,7); ctx.stroke(); ctx.setLineDash([]);
+    const ax=X(e.x)+Math.sin(e.course*D2R)*e.r/sc, ay=Y(e.y)-Math.cos(e.course*D2R)*e.r/sc;
+    ctx.beginPath(); ctx.moveTo(X(e.x),Y(e.y)); ctx.lineTo(ax,ay); ctx.stroke();
+    ctx.fillStyle=PAL.amber; ctx.font=`600 12px ${UIF}`; ctx.fillText(`CONVOY ${G.convoy.id} · BdU estimate · ${e.kn} kn`,X(e.x)+8,Y(e.y)-8);
+  }
+  ctx.setLineDash([]);
+  // hydrophone bearings
+  for(const id in G.contacts){
+    const c=G.contacts[id]; if(G.t-c.hT>30||c.visible||G.diff==='recruit') continue;
+    const a=1-(G.t-c.hT)/30;
+    ctx.strokeStyle=c.hEsc?`rgba(224,83,63,${.5*a})`:`rgba(240,180,76,${.4*a})`;
+    ctx.beginPath(); ctx.moveTo(X(s.x),Y(s.y)); ctx.lineTo(X(s.x+Math.sin(c.hb*D2R)*16000),Y(s.y+Math.cos(c.hb*D2R)*16000)); ctx.stroke();
+  }
+  // torpedoes
+  for(const t of G.torps){
+    ctx.strokeStyle='rgba(223,230,220,.55)'; ctx.setLineDash([2,4]); ctx.beginPath();
+    t.trail.forEach((p,i)=>i?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1]))); ctx.lineTo(X(t.x),Y(t.y)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=PAL.ink; ctx.beginPath(); ctx.arc(X(t.x),Y(t.y),2.5,0,7); ctx.fill();
+  }
+  // depth charges & fx
+  ctx.fillStyle=PAL.alarm;
+  for(const c of G.charges){ ctx.beginPath(); ctx.arc(X(c.x),Y(c.y),2,0,7); ctx.fill(); }
+  for(const f of G.fx){
+    const k=f.t/f.life;
+    ctx.strokeStyle=f.type==='boom'?`rgba(240,180,76,${1-k})`:f.type==='dc'?`rgba(223,230,220,${.8*(1-k)})`:`rgba(223,230,220,${.5*(1-k)})`;
+    ctx.lineWidth=f.type==='boom'?2:1.2;
+    ctx.beginPath(); ctx.arc(X(f.x),Y(f.y),4+k*(f.type==='boom'?30:16),0,7); ctx.stroke();
+  }
+  ctx.lineWidth=1;
+  // ships
+  for(const sh of G.ships){
+    const C=CLS[sh.cls], c=G.contacts[sh.id];
+    let show=null;
+    if(G.diff==='recruit'||(c&&c.visible)) show={x:sh.x,y:sh.y,hdg:sh.hdg,a:1};
+    else if(c&&c.seen&&G.t-c.lastT<1200) show={x:c.x,y:c.y,hdg:c.hdg,a:.35,ghost:true};
+    if(!show) continue;
+    const px=X(show.x), py=Y(show.y);
+    if(sh.state==='sunk'){ ctx.strokeStyle=PAL.grey; ctx.beginPath(); ctx.moveTo(px-4,py-4); ctx.lineTo(px+4,py+4); ctx.moveTo(px+4,py-4); ctx.lineTo(px-4,py+4); ctx.stroke(); continue; }
+    const esc=C.kind==='escort';
+    const col=sh.state==='sinking'?PAL.grey:sh.state==='damaged'?'#ff8a3d':esc?PAL.alarm:PAL.amber;
+    const len=Math.max(C.L/sc,esc?11:14), wid=Math.max(C.B/sc,esc?4:5.5);
+    ctx.save(); ctx.globalAlpha=show.a; ctx.translate(px,py); ctx.rotate(show.hdg*D2R);
+    if(!show.ghost&&sh.spd>.5){ ctx.strokeStyle=col; ctx.globalAlpha=show.a*.5; ctx.beginPath(); ctx.moveTo(0,-len/2); ctx.lineTo(0,-len/2-sh.spd*60/sc); ctx.stroke(); ctx.globalAlpha=show.a; }
+    ctx.beginPath(); ctx.moveTo(0,-len/2); ctx.lineTo(wid/2,-len/2+wid); ctx.lineTo(wid/2,len/2); ctx.lineTo(-wid/2,len/2); ctx.lineTo(-wid/2,-len/2+wid); ctx.closePath();
+    if(show.ghost){ ctx.strokeStyle=col; ctx.setLineDash([2,2]); ctx.stroke(); ctx.setLineDash([]); } else { ctx.fillStyle=col; ctx.fill(); }
+    ctx.restore();
+    if(sc<30||G.lock===sh.id){ ctx.fillStyle=col; ctx.globalAlpha=show.a; ctx.font=`600 11px ${UIF}`; ctx.fillText(C.name.toUpperCase(),px+10,py+4); ctx.globalAlpha=1; }
+    if(sh.ai&&sh.ai.state!=='patrol'&&!show.ghost){ ctx.strokeStyle=PAL.alarm; ctx.globalAlpha=.4+.4*Math.sin(performance.now()/150); ctx.beginPath(); ctx.arc(px,py,12,0,7); ctx.stroke(); ctx.globalAlpha=1; }
+  }
+  // lock & solution
+  if(G.lock){
+    const sh=G.ships.find(x=>x.id===G.lock), c=G.contacts[G.lock];
+    const p=G.diff==='recruit'||(c&&c.visible)?sh:c;
+    if(p){ ctx.strokeStyle=PAL.brass; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),16,0,7); ctx.stroke(); ctx.lineWidth=1; }
+    const so=G.sol;
+    if(so&&so.ix!==null){
+      ctx.strokeStyle=so.ok&&so.inRange?'rgba(121,192,143,.75)':'rgba(224,83,63,.7)'; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(X(s.x),Y(s.y)); ctx.lineTo(X(so.ix),Y(so.iy)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(X(so.ix),Y(so.iy),4,0,7); ctx.stroke();
+    }
+  }
+  // own boat
+  const ox=X(s.x), oy=Y(s.y);
+  if(Math.abs(angDiff(s.heading,s.orderHdg))>1){ ctx.strokeStyle='rgba(143,224,166,.5)'; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.sin(s.orderHdg*D2R)*90,oy-Math.cos(s.orderHdg*D2R)*90); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.strokeStyle=PAL.sub; ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.sin(s.heading*D2R)*(20+s.speed*120/sc),oy-Math.cos(s.heading*D2R)*(20+s.speed*120/sc)); ctx.stroke();
+  ctx.save(); ctx.translate(ox,oy); ctx.rotate(s.heading*D2R);
+  const L=Math.max(67/sc,16), Wd=Math.max(6/sc,5);
+  ctx.beginPath(); ctx.ellipse(0,0,Wd/2,L/2,0,0,7);
+  if(s.depth<.5){ ctx.fillStyle=PAL.sub; ctx.fill(); } else { ctx.strokeStyle=PAL.sub; ctx.lineWidth=1.5; ctx.stroke(); }
+  ctx.fillStyle=PAL.sub; ctx.fillRect(-1.5,-3,3,5);
+  ctx.restore();
+  // scale bar & hover
+  const sbM=niceStep(sc*90), sbPx=sbM/sc;
+  ctx.strokeStyle=PAL.ink; ctx.fillStyle=PAL.ink; ctx.font=`11px ${MONO}`;
+  const sbx=W-sbPx-16, sby=H-30;
+  ctx.beginPath(); ctx.moveTo(sbx,sby); ctx.lineTo(sbx+sbPx,sby); ctx.moveTo(sbx,sby-4); ctx.lineTo(sbx,sby+4); ctx.moveTo(sbx+sbPx,sby-4); ctx.lineTo(sbx+sbPx,sby+4); ctx.stroke();
+  ctx.textAlign='center'; ctx.fillText(sbM>=1000?sbM/1000+' km':sbM+' m',sbx+sbPx/2,sby-7); ctx.textAlign='left';
+  if(hover&&G.view==='chart'){
+    const wx=m.cx+(hover.x-W/2)*sc, wy=m.cy-(hover.y-H/2)*sc;
+    const t=`${p3(brg(s.x,s.y,wx,wy))}° · ${(Math.hypot(wx-s.x,wy-s.y)/1000).toFixed(2)} km`;
+    ctx.fillStyle='rgba(11,18,19,.8)'; const tw=ctx.measureText(t).width; ctx.fillRect(hover.x+12,hover.y+10,tw+10,18);
+    ctx.fillStyle=PAL.ink; ctx.fillText(t,hover.x+17,hover.y+23);
+  }
+}
+
+/* ---- periscope / bridge binoculars ---- */
+const WAVES=Array.from({length:150},()=>({b:rnd(0,360),d:10*Math.pow(180,Math.random()),ph:rnd(0,6.28),w:rnd(2,6)}));
+function lerpC(a,b,k){ return a.map((v,i)=>Math.round(v+(b[i]-v)*k)); }
+const rgb=a=>`rgb(${a[0]},${a[1]},${a[2]})`;
+
+function drawProfile(sh,C,x,wl,pw,ph,bowRight,col,glow){
+  const P=PROF[C.prof];
+  const X=u=>x+((bowRight?u:1-u)-.5)*pw, Y=v=>wl-v*ph;
+  ctx.save();
+  if(sh.state==='sinking'){
+    ctx.beginPath(); ctx.rect(x-pw*3-40,wl-ph*4-40,pw*6+80,ph*4+40+.5); ctx.clip();
+    const p=sh.sinkP;
+    ctx.translate(x,wl); ctx.rotate(sh.tilt*p*.55*(bowRight?1:-1)); ctx.translate(-x,-wl+p*p*ph*1.6);
+  }
+  ctx.fillStyle=col; ctx.strokeStyle=col;
+  ctx.beginPath(); P.hull.forEach((p,i)=>i?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1]))); ctx.closePath(); ctx.fill();
+  for(const b of P.blocks){ const x0=X(b[0]),x1=X(b[1]); ctx.fillRect(Math.min(x0,x1),Y(b[3]),Math.abs(x1-x0)+.5,Y(b[2])-Y(b[3])+.5); }
+  for(const f of P.funnels){ const x0=X(f[0]),x1=X(f[1]); ctx.fillRect(Math.min(x0,x1),Y(f[3]),Math.max(1,Math.abs(x1-x0)),Y(f[2])-Y(f[3])); }
+  ctx.lineWidth=Math.max(.8,pw*.006);
+  for(const m of P.masts){ ctx.beginPath(); ctx.moveTo(X(m[0]),Y(.3)); ctx.lineTo(X(m[0]),Y(m[1])); ctx.stroke(); }
+  if(glow){ const gx=X(.5+Math.sin(sh.id)*.2), gy=Y(.32); const g=ctx.createRadialGradient(gx,gy,0,gx,gy,ph*.7); g.addColorStop(0,'rgba(255,170,60,.85)'); g.addColorStop(1,'rgba(255,90,20,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(gx,gy,ph*.7,0,7); ctx.fill(); }
+  ctx.restore();
+  // smoke
+  const now=performance.now()/1000;
+  const sm=glow?{u:.5,v:.4,c:'30,28,26',n:9,sz:.35,rise:1.6}:(C.kind==='merchant'&&sh.state==='ok'&&P.funnels.length)?{u:(P.funnels[0][0]+P.funnels[0][1])/2,v:P.funnels[0][3],c:'90,92,90',n:6,sz:.12,rise:.35}:null;
+  if(sm&&sh.state!=='sinking'||sm&&sh.sinkP<.7){
+    for(let i=0;i<sm.n;i++){
+      const k=((now*.25+i/sm.n)%1);
+      const sx=X(sm.u)-k*pw*.35, sy=Y(sm.v)-k*ph*sm.rise, r=ph*sm.sz*(.4+k*1.4);
+      ctx.fillStyle=`rgba(${sm.c},${.28*(1-k)})`; ctx.beginPath(); ctx.arc(sx,sy,Math.max(1,r),0,7); ctx.fill();
+    }
+  }
+}
+
+function drawScope(W,H){
+  const s=G.sub, now=performance.now()/1000;
+  ctx.fillStyle='#050808'; ctx.fillRect(0,0,W,H);
+  const mode=s.depth<.5?'uzo':(s.depth<=14&&s.scopeUp&&!s.dmg.scope)?'scope':null;
+  ctx.textAlign='center'; ctx.font=`600 16px ${UIF}`; ctx.fillStyle=PAL.dim;
+  if(!mode){
+    const msg=s.dmg.scope&&s.depth>=.5?`Periscope damaged. Repairs in ${Math.ceil(s.dmg.scope/60)} min.`:s.depth<=14?'Periscope is down. Press U or “Raise periscope”.':`Depth ${Math.round(s.depth)} m. The periscope only reaches the surface from 14 m or shallower.`;
+    ctx.fillText(msg,W/2,H/2); ctx.textAlign='left'; return;
+  }
+  const fov=G.scope.zoom?7.5:30;
+  const R=Math.max(60,Math.min(W*(mode==='uzo'?.3:.46),H*.46)), cx=W/2, cy=H/2;
+  const pxDeg=(mode==='uzo'?R*3.2:R*2)/fov;
+  const eyeH=mode==='uzo'?6:1.4;
+  const bob=mode==='scope'?Math.sin(now*1.3)*R*.03+Math.sin(now*.47)*R*.025:Math.sin(now*.8)*R*.012;
+  const hy=cy+bob;
+  const vis=visibility(), day=clamp((vis-.35)/.65,0,1);
+  const skyTop=lerpC([6,10,16],[96,122,136],day), skyHz=lerpC([22,30,36],[190,198,192],day);
+  const seaHz=lerpC([16,26,30],[66,88,92],day), seaLo=lerpC([4,10,12],[14,30,36],day);
+  const center=wrap360(s.heading+G.scope.rel);
+  let g=ctx.createLinearGradient(0,hy-R*1.2,0,hy); g.addColorStop(0,rgb(skyTop)); g.addColorStop(1,rgb(skyHz));
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,hy+1);
+  g=ctx.createLinearGradient(0,hy,0,hy+R*1.1); g.addColorStop(0,rgb(seaHz)); g.addColorStop(1,rgb(seaLo));
+  ctx.fillStyle=g; ctx.fillRect(0,hy,W,H-hy);
+  // waves
+  ctx.lineWidth=1;
+  for(const w of WAVES){
+    const rel=angDiff(center,w.b+Math.sin(now*.2+w.ph)*.5); if(Math.abs(rel)>fov/2+4) continue;
+    const dep=(eyeH/w.d)/D2R*pxDeg; const y=hy+dep+Math.sin(now*1.6+w.ph)*dep*.04;
+    const len=(w.w/w.d)/D2R*pxDeg;
+    ctx.strokeStyle=`rgba(${lerpC([60,80,84],[200,214,210],day).join(',')},${.12+.18*Math.min(1,30/w.d)})`;
+    ctx.beginPath(); ctx.moveTo(cx+rel*pxDeg-len/2,y); ctx.lineTo(cx+rel*pxDeg+len/2,y); ctx.stroke();
+  }
+  // ships, far first
+  const shipCol=lerpC([10,14,16],[58,64,66],day);
+  const list=[];
+  for(const sh of G.ships){
+    if(sh.state==='sunk') continue;
+    const C=CLS[sh.cls], r=dist(s,sh), Rv=(mode==='uzo'?13000:9500)*vis*(.6+.4*C.H/24);
+    if(r>Rv||r<5) continue;
+    const rel=angDiff(center,brg(s.x,s.y,sh.x,sh.y));
+    if(Math.abs(rel)>fov/2+12) continue;
+    list.push({sh,C,r,rel,Rv});
+  }
+  list.sort((a,b)=>b.r-a.r);
+  let centered=null;
+  for(const o of list){
+    const {sh,C,r,rel}=o;
+    const aob=angDiff(sh.hdg,brg(sh.x,sh.y,s.x,s.y)), sinA=Math.abs(Math.sin(aob*D2R)), cosA=Math.abs(Math.cos(aob*D2R));
+    const pw=((C.L*sinA+C.B*cosA)/r)/D2R*pxDeg, ph=(C.H/r)/D2R*pxDeg;
+    const x=cx+rel*pxDeg, wl=hy+(eyeH/r)/D2R*pxDeg*.6;
+    const bowRight=Math.sin(angDiff(brg(s.x,s.y,sh.x,sh.y),sh.hdg)*D2R)>0;
+    const haze=clamp(r/o.Rv,0,1);
+    const col=rgb(lerpC(shipCol,skyHz,haze*.8));
+    drawProfile(sh,C,x,wl,pw,ph,bowRight,col,sh.state==='damaged'||(sh.state==='sinking'&&sh.sinkP<.6));
+    // bow wave
+    if(sh.spd>2&&sh.state!=='sinking'){ ctx.fillStyle=`rgba(220,228,224,${.35*(1-haze)})`; const bx=x+(bowRight?.5:-.5)*pw; ctx.beginPath(); ctx.ellipse(bx,wl,Math.max(1,pw*.05*sh.spd/5),Math.max(.6,ph*.05),0,0,7); ctx.fill(); }
+    if(Math.abs(rel)<(G.scope.zoom?1.2:3)&&(!centered||Math.abs(rel)<Math.abs(centered.rel))) centered=o;
+  }
+  // explosions & water columns
+  for(const f of G.fx){
+    if(f.type==='splash'&&mode!=='uzo') continue;
+    const r=Math.hypot(f.x-s.x,f.y-s.y); if(r<20) continue;
+    const rel=angDiff(center,brg(s.x,s.y,f.x,f.y)); if(Math.abs(rel)>fov/2+5) continue;
+    const k=f.t/f.life, x=cx+rel*pxDeg, wl=hy+(eyeH/r)/D2R*pxDeg*.6;
+    const hM=f.type==='boom'?60:f.type==='dc'?35:12;
+    const h=(hM/r)/D2R*pxDeg*Math.sin(Math.min(1,k*2.5)*Math.PI/2)*(1-k*.3), w=h*.35;
+    ctx.fillStyle=`rgba(225,232,228,${.8*(1-k)})`; ctx.beginPath(); ctx.ellipse(x,wl-h/2,w/2,h/2,0,0,7); ctx.fill();
+    if(f.type==='boom'&&f.t<.8){ ctx.fillStyle=`rgba(255,180,80,${.9*(1-f.t/.8)})`; ctx.beginPath(); ctx.arc(x,wl-h*.3,h*.35,0,7); ctx.fill(); }
+  }
+  // lens wash at periscope depth
+  if(mode==='scope'){
+    const w=.5+.5*Math.sin(now*.9+Math.sin(now*.31)*2)+Math.abs(s.speed)/(7.6*KN)*.12;
+    if(w>.9){ const k=(w-.9)/.22; ctx.fillStyle=`rgba(${seaLo.join(',')},${Math.min(.9,k)})`; ctx.fillRect(0,hy-R*k*1.2,W,H); }
+  }
+  if(vis<1){ ctx.fillStyle=`rgba(0,4,8,${(1-vis)*.45})`; ctx.fillRect(0,0,W,H); }
+  // optics mask
+  ctx.globalCompositeOperation='destination-in'; ctx.fillStyle='#000'; ctx.beginPath();
+  if(mode==='uzo'){ ctx.arc(cx-R*.62,cy,R,0,7); ctx.moveTo(cx+R*1.62,cy); ctx.arc(cx+R*.62,cy,R,0,7); }
+  else ctx.arc(cx,cy,R,0,7);
+  ctx.fill();
+  ctx.globalCompositeOperation='destination-over'; ctx.fillStyle='#050808'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='source-over';
+  ctx.strokeStyle='rgba(200,163,90,.6)'; ctx.lineWidth=2; ctx.beginPath();
+  if(mode==='uzo'){ ctx.arc(cx-R*.62,cy,R,0,7); ctx.moveTo(cx+R*1.62,cy); ctx.arc(cx+R*.62,cy,R,0,7); } else ctx.arc(cx,cy,R,0,7);
+  ctx.stroke(); ctx.lineWidth=1;
+  // reticle
+  const rc='rgba(10,12,12,.85)';
+  ctx.strokeStyle=rc; ctx.fillStyle=rc; ctx.font=`10px ${MONO}`; ctx.textAlign='center';
+  ctx.beginPath(); ctx.moveTo(cx,cy-R*.9); ctx.lineTo(cx,cy+R*.9); ctx.moveTo(cx-R*.95,cy); ctx.lineTo(cx+R*.95,cy); ctx.stroke();
+  const tick=G.scope.zoom?1:5;
+  for(let d=-Math.floor(fov/2/tick)*tick;d<=fov/2;d+=tick){
+    if(d===0) continue; const x=cx+d*pxDeg; if(Math.abs(x-cx)>R*.92) continue;
+    ctx.beginPath(); ctx.moveTo(x,cy-5); ctx.lineTo(x,cy+5); ctx.stroke();
+    if(d%(tick*2)===0) ctx.fillText(String(Math.abs(d)),x,cy+16);
+  }
+  for(let i=1;i<=4;i++){ const y=cy-i*R*.12; ctx.beginPath(); ctx.moveTo(cx-6,y); ctx.lineTo(cx+6,y); ctx.stroke(); }
+  // readouts
+  ctx.fillStyle=PAL.amber; ctx.font=`600 14px ${MONO}`;
+  ctx.fillText(`BRG ${p3(center)}°  REL ${G.scope.rel>=0?'+':''}${Math.round(G.scope.rel)}°`,cx,Math.max(18,cy-R-12));
+  ctx.font=`600 12px ${UIF}`; ctx.fillStyle=PAL.dim;
+  ctx.fillText(`${mode==='uzo'?'BRIDGE BINOCULARS':'ATTACK PERISCOPE'} · ${G.scope.zoom?'6×':'1.5×'}${G.scope.track?' · TRACKING':''}`,cx,Math.min(H-8,cy+R+20));
+  if(centered){
+    const {sh,C,r}=centered;
+    const t=`${C.name.toUpperCase()} · ~${f0(Math.round(sh.ton/500)*500)} GRT · ${(r/1000).toFixed(1)} km${G.lock===sh.id?' · LOCKED':''}${sh.state==='sinking'?' · SINKING':sh.state==='damaged'?' · DAMAGED':''}`;
+    ctx.fillStyle='rgba(5,8,8,.75)'; ctx.font=`600 13px ${UIF}`; const tw=ctx.measureText(t).width;
+    ctx.fillRect(cx-tw/2-8,cy+R*.55-14,tw+16,20); ctx.fillStyle=G.lock===sh.id?PAL.amber:PAL.ink; ctx.fillText(t,cx,cy+R*.55);
+  }
+  ctx.textAlign='left';
+  G._scopeGeom={cx,pxDeg,center,list};
+}
+
+function drawHUD(W,H){
+  const s=G.sub;
+  const lines=[`HDG ${p3(s.heading)}°  SPD ${(Math.abs(s.speed)/KN).toFixed(1)} kn`,`DEPTH ${Math.round(s.depth)} m → ${s.orderDepth} m`,`HULL ${Math.round(s.hull)}%  BATT ${Math.round(s.battery)}%`];
+  const warn=[];
+  if(G.t-G.pingedT<10) warn.push('ASDIC CONTACT. WE ARE BEING PINGED');
+  if(s.depth>230-(100-s.hull)*.6-20) warn.push('NEAR CRUSH DEPTH');
+  if(s.flood>30) warn.push(`FLOODING ${Math.round(s.flood)}%`);
+  if(G.charges.length&&s.depth>=.5) warn.push('DEPTH CHARGES IN THE WATER');
+  ctx.font=`600 12px ${MONO}`;
+  const bw=Math.max(...lines.map(l=>ctx.measureText(l).width))+20, bh=lines.length*17+10;
+  const x=12, y=H-bh-12;
+  ctx.fillStyle='rgba(5,9,10,.72)'; ctx.fillRect(x,y,bw,bh);
+  ctx.fillStyle=PAL.sub; lines.forEach((l,i)=>ctx.fillText(l,x+10,y+20+i*17));
+  if(warn.length){
+    ctx.font=`700 13px ${UIF}`; const blink=.6+.4*Math.sin(performance.now()/180);
+    warn.forEach((w,i)=>{ const tw=ctx.measureText(w).width; ctx.fillStyle=`rgba(224,83,63,${.25*blink})`; ctx.fillRect(x,y-26-i*24,tw+16,20); ctx.fillStyle=PAL.alarm; ctx.fillText(w,x+8,y-11-i*24); });
+  }
+  if(G.paused&&!G.over&&!G.encounterDone){ ctx.fillStyle='rgba(5,9,10,.6)'; ctx.fillRect(0,0,W,H); ctx.fillStyle=PAL.brass; ctx.textAlign='center'; ctx.font=`400 40px 'Saira Stencil One',Impact,sans-serif`; ctx.fillText('PAUSED',W/2,H/2); ctx.textAlign='left'; }
+}
+
+function render(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(!G){ ctx.fillStyle=PAL.chart; ctx.fillRect(0,0,VW,VH); return; }
+  if(G.shake>.2){ ctx.translate(rnd(-1,1)*G.shake,rnd(-1,1)*G.shake); G.shake*=.9; } else G.shake=0;
+  if(G.view==='chart') drawChart(VW,VH); else drawScope(VW,VH);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  drawHUD(VW,VH);
+}
+
+/* ============ UI sync ============ */
+function buildTubes(){
+  $('#tele').innerHTML=TELE.map((t,i)=>`<button data-act="tele" data-v="${i}" title="${t.l}">${t.l}</button>`).join('');
+}
+let uiT=0;
+function updateUI(){
+  const s=G.sub, vis=visibility();
+  $('#clock').textContent=`D${dayN(G.t-14*3600-20*60)} ${fmtT(G.t)} · ${vis>=1?'Day':vis<=.35?'Night':'Twilight'}`;
+  $('#tons').textContent=f0(G.patrol.tonnage);
+  $('#torps').textContent=torpCount();
+  $('#tcv').textContent=G.tc+'×';
+  $('#roHdg').textContent=p3(s.heading)+'°'; $('#roHdgO').textContent=`ordered ${p3(s.orderHdg)}°`;
+  $('#roSpd').textContent=(Math.abs(s.speed)/KN).toFixed(1); $('#roSpdO').textContent=`kn · ${TELE[s.tele].l}${s.silent&&s.depth>=.5?' (silent)':''}`;
+  $('#roDep').textContent=Math.round(s.depth)+' m'; $('#roDepO').textContent=`ordered ${s.orderDepth} m`;
+  $('#modeTxt').textContent=s.depth<.5?'Surfaced':s.depth<=14?(s.scopeUp?'Periscope depth, scope up':'Periscope depth'):s.crash?'Crash diving':'Submerged';
+  document.querySelectorAll('#tele button').forEach((b,i)=>b.classList.toggle('on',i===s.tele));
+  $('#raiseBtn').textContent=s.scopeUp?'Lower periscope':'Raise periscope'; $('#raiseBtn').classList.toggle('on',s.scopeUp);
+  $('#raiseBtn').disabled=!(s.depth>=.5&&s.depth<=14.5);
+  $('#silentBtn').classList.toggle('on',s.silent);
+  // attack plot
+  const so=G.sol;
+  if(so){
+    $('#tTgt').textContent=so.cls+(G.lockInfo?` · ~${f0(Math.round((G.ships.find(x=>x.id===so.id)||{ton:0}).ton/500)*500)} GRT`:'');
+    $('#tRng').textContent=(so.range/1000).toFixed(2)+' km';
+    $('#tBrg').textContent=p3(so.bearing)+'°';
+    $('#tAob').textContent=`${Math.abs(Math.round(so.aob))}° ${so.aob>=0?'S':'P'}`;
+    $('#tSpd').textContent=so.spdKn.toFixed(1)+' kn';
+    $('#tGyro').textContent=so.gyro===null?'—':`${so.gyro>=0?'+':''}${Math.round(so.gyro)}° ${so.bow?'bow':'stern'}`;
+    $('#tRun').textContent=so.run===null?'—':`${Math.round(so.run)} s${so.inRange?'':' (out of range)'}`;
+    $('#tQ').style.width=Math.round(so.q*100)+'%';
+    $('#solTxt').textContent=`solution ${Math.round(so.q*100)}%${so.ok?'':' · gyro limit'}`;
+  } else {
+    ['#tTgt','#tRng','#tBrg','#tAob','#tSpd','#tGyro','#tRun'].forEach(k=>$(k).textContent='—');
+    $('#tTgt').textContent='No target. Lock a sighted ship (L).';
+    $('#tQ').style.width='0'; $('#solTxt').textContent='no target';
+  }
+  $('#tubes').innerHTML=G.tubes.map(t=>{
+    const cls=t.jam?'jam':t.st==='loaded'?'ready':'';
+    const txt=t.jam?'JAMMED':t.st==='loaded'?t.type:t.st==='loading'?(s.silent?'paused':Math.round(t.rl*100)+'%'):'empty';
+    return `<div class="tube ${cls}"><b>${t.bow?'BOW':'STERN'} ${t.n}</b>${txt}${t.st==='loading'&&!t.jam?`<span class="prog" style="width:${t.rl*100}%"></span>`:''}</div>`;
+  }).join('');
+  $('#tDep').textContent=G.torpDepth+' m';
+  document.querySelectorAll('.sal').forEach(b=>b.classList.toggle('on',+b.dataset.v===G.salvo));
+  $('#rlA').classList.toggle('on',G.reloadPref==='G7a'); $('#rlE').classList.toggle('on',G.reloadPref==='G7e');
+  $('#stock').textContent=`spare ${G.stock.G7a} G7a · ${G.stock.G7e} G7e`;
+  $('#fire').disabled=!G.tubes.some(t=>t.st==='loaded'&&!t.jam)||s.depth>16;
+  // boat
+  const bar=(id,v,col)=>{ const el=$(id); el.style.width=clamp(v,0,100)+'%'; el.style.background=col; };
+  bar('#bHull',s.hull,s.hull>60?'var(--ok)':s.hull>30?'var(--amber)':'var(--alarm)'); $('#vHull').textContent=Math.round(s.hull)+'%';
+  bar('#bBat',s.battery,s.battery>40?'var(--ok)':s.battery>15?'var(--amber)':'var(--alarm)'); $('#vBat').textContent=Math.round(s.battery)+'%';
+  bar('#bFlood',s.flood,s.flood<25?'var(--amber)':'var(--alarm)'); $('#vFlood').textContent=Math.round(s.flood)+'%';
+  bar('#bNoise',s.noise*100,s.noise<.3?'var(--ok)':s.noise<.6?'var(--amber)':'var(--alarm)'); $('#vNoise').textContent=s.depth<.5?'diesel':s.noise<.3?'quiet':s.noise<.6?'audible':'loud';
+  $('#sys').innerHTML=Object.keys(SYS).map(k=>`<span class="chip ${s.dmg[k]>0?'bad':''}">${SYS[k]}${s.dmg[k]>0?' · '+Math.ceil(s.dmg[k]/60)+' min':' ok'}</span>`).join('');
+  $('#pingTxt').textContent=G.t-G.pingedT<10?'being pinged':'';
+  $('#pauseBtn').textContent=G.paused&&!G.over&&!G.encounterDone?'Resume':'Pause';
+}
+function syncButtons(){
+  if(!G) return;
+  $('#vChart').classList.toggle('on',G.view==='chart'); $('#vScope').classList.toggle('on',G.view==='scope');
+  $('#chartTools').hidden=G.view!=='chart'; $('#scopeTools').hidden=G.view!=='scope';
+  $('#szoomBtn').textContent=G.scope.zoom?'Zoom 6×':'Zoom 1.5×';
+  $('#muteBtn').textContent=SND.on?'Sound on':'Sound off';
+}
+
+/* ============ input ============ */
+function setDepth(d){
+  const s=G.sub; d=clamp(Math.round(d),0,260);
+  if(s.depth<.5&&d>0){ SND.klaxon(); log(`Dive! Dive! Flooding tanks, depth ${d} m.`); }
+  if(d===0&&s.depth>=.5) log('Surface! Blowing ballast.');
+  s.orderDepth=d; s.crash=false;
+}
+function rotateScope(d){ G.scope.rel=angDiff(0,G.scope.rel+d); G.scope.track=false; }
+function lockAction(){
+  const s=G.sub;
+  if(G.view==='scope'&&G._scopeGeom){
+    const L=G._scopeGeom.list.filter(o=>Math.abs(o.rel)<(G.scope.zoom?2:5)).sort((a,b)=>Math.abs(a.rel)-Math.abs(b.rel));
+    if(L.length){ lockShip(L[0].sh); G.scope.track=true; return; }
+    log('Nothing on the crosshair. Rotate the periscope onto a ship first.'); return;
+  }
+  const vis=G.ships.filter(displayed).sort((a,b)=>dist(a,s)-dist(b,s));
+  if(!vis.length){ log(G.sub.depth>=.5&&!G.sub.scopeUp?'No visual contacts. Raise the periscope or surface to look.':'No ships in sight to lock.'); return; }
+  const i=vis.findIndex(x=>x.id===G.lock);
+  lockShip(vis[(i+1)%vis.length]);
+}
+function act(a,v){
+  SND.init();
+  if(a==='start'){ newGame(v); return; }
+  if(a==='help'){ if(G&&!G.over&&!G.encounterDone) G.paused=true; showHelp(); return; }
+  if(a==='mute'){ SND.on=!SND.on; if(!SND.on) SND.humSet(0,38); syncButtons(); return; }
+  if(!G) return;
+  const s=G.sub;
+  switch(a){
+    case 'hdg': s.orderHdg=wrap360(Math.round(s.orderHdg)+ +v); break;
+    case 'tele': s.tele=+v; break;
+    case 'depth': setDepth(s.orderDepth+ +v); break;
+    case 'surface': setDepth(0); s.scopeUp=false; break;
+    case 'pscope': setDepth(12); break;
+    case 'crash': if(s.depth<.5) SND.klaxon(); s.orderDepth=Math.max(60,s.orderDepth); s.crash=true; s.tele=0; s.scopeUp=false; log('ALARM! Crash dive to 60 m, all ahead flank!','bad'); break;
+    case 'raise': if(s.depth>=.5&&s.depth<=14.5){ s.scopeUp=!s.scopeUp; if(s.scopeUp&&G.view==='chart'){ G.view='scope'; syncButtons(); } } else log(s.depth<.5?'On the surface, use the bridge binoculars (Periscope view).':'Too deep for the periscope. Come up to 14 m or shallower.'); break;
+    case 'silent': s.silent=!s.silent; log(s.silent?'Silent running. Motors slow, reloads halted, crew in socks.':'Silent running secured.'); break;
+    case 'tc': setTC(v==='up'?G.tc*2:G.tc/2); break;
+    case 'pause': if(!G.over&&!G.encounterDone){ G.paused=!G.paused; } break;
+    case 'view': G.view=v; syncButtons(); break;
+    case 'zoom': zoomAt(VW/2,VH/2,v==='in'?.7:1/.7); break;
+    case 'center': G.map.follow=true; break;
+    case 'tdep': G.torpDepth=clamp(G.torpDepth+ +v,1,12); break;
+    case 'salvo': G.salvo=+v; break;
+    case 'reload': G.reloadPref=v; break;
+    case 'fire': fire(); break;
+    case 'lock': lockAction(); break;
+    case 'szoom': G.scope.zoom=!G.scope.zoom; syncButtons(); break;
+    case 'sahead': G.scope.rel=0; G.scope.track=false; break;
+    case 'next': nextConvoy(); break;
+    case 'base': showFinal('base'); break;
+    case 'resume': G.paused=false; hideOverlay(); break;
+    case 'restart': showStart(); break;
+  }
+  uiT=0;
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(b){ act(b.dataset.act,b.dataset.v); } });
+document.querySelectorAll('[data-hold]').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{ holdRot=+b.dataset.hold; b.setPointerCapture(e.pointerId); });
+  const stop=()=>{ holdRot=0; }; b.addEventListener('pointerup',stop); b.addEventListener('pointercancel',stop); b.addEventListener('lostpointercapture',stop);
+});
+document.addEventListener('keydown',e=>{
+  if(!G||e.target.closest('input,textarea')) return;
+  const k=e.key, s=G.sub;
+  if(['ArrowLeft','ArrowRight',' ','ArrowUp','ArrowDown'].includes(k)) e.preventDefault();
+  if(e.repeat&&!['ArrowLeft','ArrowRight'].includes(k)) return;
+  keys.add(k);
+  switch(k.toLowerCase()){
+    case 'v': act('view',G.view==='chart'?'scope':'chart'); break;
+    case 'w': s.tele=Math.max(0,s.tele-1); break;
+    case 's': s.tele=Math.min(TELE.length-1,s.tele+1); break;
+    case 'a': act('hdg',e.shiftKey?-1:-5); break;
+    case 'd': act('hdg',e.shiftKey?1:5); break;
+    case 'r': act('depth',-10); break;
+    case 'f': act('depth',10); break;
+    case 'b': act('surface'); break;
+    case 'p': act('pscope'); break;
+    case 'c': act('crash'); break;
+    case 'u': act('raise'); break;
+    case 'z': act('szoom'); break;
+    case 'l': act('lock'); break;
+    case ' ': act('fire'); break;
+    case 'x': act('silent'); break;
+    case ']': case '=': case '+': act('tc','up'); break;
+    case '[': case '-': act('tc','down'); break;
+    case 'escape': act('pause'); break;
+    case '1': case '2': case '3': case '4': act('salvo',k); break;
+  }
+});
+document.addEventListener('keyup',e=>keys.delete(e.key));
+
+// canvas pointer: pan/zoom/tap on chart, drag/tap on periscope
+const ptrs=new Map(); let drag=null, hover=null;
+function zoomAt(px,py,f){ const m=G.map; const wx=m.cx+(px-VW/2)*m.scale, wy=m.cy-(py-VH/2)*m.scale; m.scale=clamp(m.scale*f,2,400); if(!m.follow){ m.cx=wx-(px-VW/2)*m.scale; m.cy=wy+(py-VH/2)*m.scale; } }
+function pinchD(){ const p=[...ptrs.values()]; return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y); }
+cv.addEventListener('pointerdown',e=>{ SND.init(); if(!G) return; cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  if(ptrs.size===1) drag={x0:e.offsetX,y0:e.offsetY,lx:e.offsetX,ly:e.offsetY,moved:false,pinch:0}; else if(drag){ drag.moved=true; drag.pinch=pinchD(); } });
+cv.addEventListener('pointermove',e=>{
+  hover=e.pointerType==='mouse'?{x:e.offsetX,y:e.offsetY}:null;
+  if(!G||!drag||!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  if(ptrs.size===2&&G.view==='chart'){ const d=pinchD(); if(drag.pinch){ const p=[...ptrs.values()]; zoomAt((p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2,drag.pinch/d); } drag.pinch=d; return; }
+  const dx=e.offsetX-drag.lx, dy=e.offsetY-drag.ly;
+  if(Math.hypot(e.offsetX-drag.x0,e.offsetY-drag.y0)>6) drag.moved=true;
+  if(drag.moved){
+    if(G.view==='chart'){ G.map.follow=false; G.map.cx-=dx*G.map.scale; G.map.cy+=dy*G.map.scale; }
+    else if(G._scopeGeom) rotateScope(-dx/G._scopeGeom.pxDeg);
+  }
+  drag.lx=e.offsetX; drag.ly=e.offsetY;
+});
+cv.addEventListener('pointerleave',()=>{ hover=null; });
+const endPtr=e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if(drag&&!drag.moved&&ptrs.size===0) tap(e.offsetX,e.offsetY); if(ptrs.size===0) drag=null; };
+cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',e=>{ ptrs.delete(e.pointerId); if(!ptrs.size) drag=null; });
+cv.addEventListener('wheel',e=>{ if(!G||G.view!=='chart') return; e.preventDefault(); zoomAt(e.offsetX,e.offsetY,e.deltaY>0?1.15:1/1.15); },{passive:false});
+function tap(px,py){
+  const s=G.sub;
+  if(G.view==='scope'){
+    const g=G._scopeGeom; if(!g) return;
+    const rel=(px-g.cx)/g.pxDeg;
+    const L=g.list.filter(o=>Math.abs(o.rel-rel)<(G.scope.zoom?1.5:4)).sort((a,b)=>Math.abs(a.rel-rel)-Math.abs(b.rel-rel));
+    if(L.length){ lockShip(L[0].sh); G.scope.track=true; }
+    return;
+  }
+  const m=G.map, sc=m.scale;
+  for(const sh of G.ships){
+    if(!displayed(sh)) continue;
+    const sx=VW/2+(sh.x-m.cx)/sc, sy=VH/2-(sh.y-m.cy)/sc;
+    if(Math.hypot(sx-px,sy-py)<16){ lockShip(sh); return; }
+  }
+  const wx=m.cx+(px-VW/2)*sc, wy=m.cy-(py-VH/2)*sc;
+  s.orderHdg=Math.round(brg(s.x,s.y,wx,wy));
+  log(`Helm: come to ${p3(s.orderHdg)}°.`);
+}
+
+/* ============ overlays ============ */
+const ov=$('#overlay'), card=$('#card');
+function hideOverlay(){ ov.hidden=true; }
+function showCard(html){ card.innerHTML=html; ov.hidden=false; }
+const KEYS=`<div class="keys">
+<div><kbd>W / S</kbd>engine telegraph</div><div><kbd>A / D</kbd>helm ±5° (Shift ±1°)</div>
+<div><kbd>P</kbd>periscope depth</div><div><kbd>B</kbd>surface</div>
+<div><kbd>C</kbd>crash dive</div><div><kbd>R / F</kbd>depth ∓10 m</div>
+<div><kbd>U</kbd>raise/lower scope</div><div><kbd>V</kbd>chart ↔ periscope</div>
+<div><kbd>← / →</kbd>rotate scope</div><div><kbd>Z</kbd>scope zoom</div>
+<div><kbd>L</kbd>lock target</div><div><kbd>Space</kbd>fire</div>
+<div><kbd>1–4</kbd>salvo size</div><div><kbd>X</kbd>silent running</div>
+<div><kbd>[ / ]</kbd>time compression</div><div><kbd>Esc</kbd>pause</div></div>`;
+const TIPS=`<h3>How to attack</h3>
+<p>Run surfaced at Full to get ahead of the convoy's track. Dive to periscope depth (P), raise the scope (U), rotate onto a ship and lock it (L). Keep watching: the firing solution sharpens with observation. Set torpedo depth shallower than the target's draft (merchants 6–9 m, escorts about 3 m), then fire (Space). Afterwards, go deep, slow down and rig for silent running. Escorts hunt by sound and ASDIC, and they don't know your depth.</p>
+<p>Click the chart to steer toward a point. Click a sighted ship to lock it. Drag to pan, scroll or pinch to zoom.</p>`;
+function showStart(){
+  let best=0; try{ best=+localStorage.getItem('gwp-best')||0; }catch(e){}
+  showCard(`<div class="eyebrow">North Atlantic · Autumn 1941 · Type VII boat</div>
+  <h1>Grey Wolf Patrol</h1>
+  <p>You command a U-boat on patrol. Headquarters will radio convoy sightings. Find the convoy, slip past its escorts, sink as much tonnage as you can, and bring your crew home.</p>
+  ${best?`<p class="stat">Best patrol so far: <b>${f0(best)} GRT</b></p>`:''}
+  <div class="choices">
+    <button data-act="start" data-v="recruit"><b>Recruit</b><span>All ships shown on the chart. Quick, accurate firing solutions and lighter damage.</span></button>
+    <button data-act="start" data-v="veteran"><b>Veteran</b><span>You only see what your lookouts, periscope and hydrophones pick up. Escorts are sharper.</span></button>
+  </div>
+  ${TIPS}<h3>Keys</h3>${KEYS}`);
+}
+function showHelp(){
+  showCard(`<div class="eyebrow">Commander's notes</div><h1>Controls</h1>${TIPS}<h3>Keys</h3>${KEYS}
+  <div class="row"><button data-act="resume" class="grow">Back to the boat</button><button data-act="restart">New patrol</button></div>`);
+}
+function tallyHTML(list){ return list.length?`<ul class="tally">${list.map(r=>`<li><span>${esc(r.name)} · ${esc(r.cls)}</span><span>${f0(r.ton)} GRT</span></li>`).join('')}</ul>`:'<p>No ships sunk.</p>'; }
+function showDebrief(kind){
+  const tons=G.encSunk.reduce((a,r)=>a+r.ton,0), left=torpCount();
+  showCard(`<div class="eyebrow">Convoy ${esc(G.convoy.id)} · engagement over</div>
+  <h1>${kind==='destroyed'?'Convoy destroyed':'Convoy out of reach'}</h1>
+  <p>${kind==='destroyed'?'Every merchant in the convoy is on the bottom.':'The surviving ships have slipped beyond reach.'} This attack: <span class="big">${f0(tons)}</span> GRT.</p>
+  ${tallyHTML(G.encSunk)}
+  <p>Hull ${Math.round(G.sub.hull)}% · ${left} torpedoes left · patrol total ${f0(G.patrol.tonnage)} GRT.</p>
+  <div class="row">${left>0?'<button data-act="next" class="grow">Hunt the next convoy</button>':''}<button data-act="base" class="grow">Return to base</button></div>`);
+}
+function saveBest(){ try{ const b=+localStorage.getItem('gwp-best')||0; if(G.patrol.tonnage>b) localStorage.setItem('gwp-best',String(G.patrol.tonnage)); }catch(e){} }
+function showFinal(){
+  G.over={win:true}; G.paused=true; saveBest();
+  const t=G.patrol.tonnage, rank=t>=50000?'Knight’s Cross recommendation':t>=25000?'Outstanding patrol':t>=10000?'Successful patrol':t>0?'Modest patrol':'Empty-handed';
+  showCard(`<div class="eyebrow">Patrol report · ${dayN(G.t-14*3600-20*60)} days at sea</div>
+  <h1>Home to Lorient</h1><p>${rank}. Total sunk: <span class="big">${f0(t)}</span> GRT in ${G.patrol.sunk.length} ship${G.patrol.sunk.length===1?'':'s'}.</p>
+  ${tallyHTML(G.patrol.sunk)}
+  <div class="row"><button data-act="restart" class="grow">Start a new patrol</button></div>`);
+}
+function showLoss(){
+  saveBest();
+  const why={dc:'Depth charges split the pressure hull.',crush:'The hull collapsed below crush depth.',flood:'Flooding overwhelmed the pumps.',gun:'Shellfire holed the boat on the surface.',ram:'An escort rammed the boat.',hull:'The hull gave out.'}[G.over.reason]||'The boat was lost.';
+  showCard(`<div class="eyebrow">Missing, presumed lost</div><h1>Lost with all hands</h1>
+  <p>${why} The boat sank ${f0(G.patrol.tonnage)} GRT before it was lost.</p>${tallyHTML(G.patrol.sunk)}
+  <div class="row"><button data-act="restart" class="grow">Start a new patrol</button></div>`);
+}
+
+/* ============ main loop ============ */
+let last=performance.now();
+function frame(now){
+  const rdt=Math.min(.1,(now-last)/1000); last=now;
+  if(G&&!G.paused&&!G.over){
+    if(holdRot||keys.has('ArrowLeft')||keys.has('ArrowRight')){ const dir=holdRot||(keys.has('ArrowLeft')?-1:1); rotateScope(dir*(G.scope.zoom?6:24)*rdt); }
+    if(G.scope.track&&G.lock){ const sh=G.ships.find(x=>x.id===G.lock); if(sh) G.scope.rel=angDiff(G.sub.heading,brg(G.sub.x,G.sub.y,sh.x,sh.y)); }
+    G.acc+=rdt*G.tc;
+    let n=0;
+    while(G.acc>=STEP&&n<40){ step(STEP); G.acc-=STEP; n++; if(G.over||G.paused) break; }
+    if(n>=40) G.acc=0;
+  }
+  if(G){
+    const s=G.sub, lvl=s.depth<.5?.05+.06*Math.abs(s.speed)/(17.5*KN):.015+.03*Math.abs(s.speed)/(7.6*KN);
+    SND.humSet(G.over||G.paused?0:lvl, s.depth<.5?34+Math.abs(s.speed)*3:50+Math.abs(s.speed)*6);
+    uiT-=rdt; if(uiT<=0){ updateUI(); uiT=.12; }
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+function boot(data){
+  if(data&&data.G&&data.G.sub){ G=data.G; buildTubes(); renderLog(); syncButtons(); if(G.over){ showStart(); } else hideOverlay(); }
+  else { buildTubes(); showStart(); }
+  requestAnimationFrame(frame);
+}
+try{ window.claude?.hot?.snapshot?.(()=>({G})); }catch(e){}
+if(window.claude?.hot?.ready) window.claude.hot.ready(boot); else boot(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>
